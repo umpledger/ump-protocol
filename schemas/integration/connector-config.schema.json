@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/connector-config.schema.json",
+  "title": "UMP Connector Configuration",
+  "description": "Configuration schema for UMP integration connectors. Connectors provide standardized interfaces for integrating UMP with external systems (CRM, ERP, payment gateways, tax engines, etc.).",
+  "type": "object",
+  "required": ["connector_id", "connector_type", "name", "direction", "connection", "status"],
+  "properties": {
+    "connector_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this connector instance."
+    },
+    "connector_type": {
+      "type": "string",
+      "enum": [
+        "CRM", "ERP", "PAYMENT_GATEWAY", "TAX_ENGINE", "IDENTITY_PROVIDER",
+        "CLOUD_PLATFORM", "MESSAGING", "FILE_STORAGE", "DATABASE",
+        "ORCHESTRATION", "ANALYTICS", "CUSTOM"
+      ],
+      "description": "Category of external system this connector integrates with."
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable name for this connector."
+    },
+    "provider": {
+      "type": "string",
+      "description": "Specific product/vendor being connected.",
+      "examples": ["Salesforce", "NetSuite", "Stripe", "Avalara", "Okta", "AWS_S3", "Rafay"]
+    },
+    "direction": {
+      "type": "string",
+      "enum": ["INBOUND", "OUTBOUND", "BIDIRECTIONAL"],
+      "description": "Data flow direction relative to UMP."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["CONFIGURED", "TESTING", "ACTIVE", "PAUSED", "ERROR", "DECOMMISSIONED"]
+    },
+    "connection": {
+      "type": "object",
+      "description": "Connection settings for the external system.",
+      "required": ["protocol", "authentication"],
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "enum": ["REST_API", "GRAPHQL", "SOAP", "GRPC", "SFTP", "DATABASE", "MESSAGE_QUEUE", "WEBHOOK"],
+          "description": "Communication protocol."
+        },
+        "base_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL for API-based connectors."
+        },
+        "authentication": {
+          "type": "object",
+          "required": ["auth_type"],
+          "properties": {
+            "auth_type": {
+              "type": "string",
+              "enum": ["OAUTH2", "API_KEY", "BASIC", "CERTIFICATE", "AWS_IAM", "BEARER_TOKEN", "CUSTOM"]
+            },
+            "oauth2_config": {
+              "type": "object",
+              "properties": {
+                "token_url": { "type": "string", "format": "uri" },
+                "client_id": { "type": "string" },
+                "client_secret_ref": { "type": "string", "description": "Reference to secret in vault (never stored in config)." },
+                "scopes": { "type": "array", "items": { "type": "string" } },
+                "grant_type": { "type": "string", "enum": ["client_credentials", "authorization_code", "refresh_token"] }
+              }
+            },
+            "api_key_config": {
+              "type": "object",
+              "properties": {
+                "key_ref": { "type": "string", "description": "Reference to API key in vault." },
+                "header_name": { "type": "string", "default": "X-API-Key" },
+                "location": { "type": "string", "enum": ["HEADER", "QUERY_PARAM"] }
+              }
+            }
+          }
+        },
+        "timeout_ms": { "type": "integer", "minimum": 1000, "maximum": 300000, "default": 30000 },
+        "retry_config": {
+          "type": "object",
+          "properties": {
+            "max_retries": { "type": "integer", "minimum": 0, "maximum": 10, "default": 3 },
+            "backoff_strategy": { "type": "string", "enum": ["FIXED", "LINEAR", "EXPONENTIAL"], "default": "EXPONENTIAL" },
+            "initial_delay_ms": { "type": "integer", "default": 1000 },
+            "max_delay_ms": { "type": "integer", "default": 60000 },
+            "retryable_status_codes": {
+              "type": "array",
+              "items": { "type": "integer" },
+              "default": [429, 500, 502, 503, 504]
+            }
+          }
+        },
+        "rate_limiting": {
+          "type": "object",
+          "properties": {
+            "requests_per_second": { "type": "number", "minimum": 0.1 },
+            "burst_size": { "type": "integer", "minimum": 1 },
+            "concurrent_connections": { "type": "integer", "minimum": 1, "maximum": 100 }
+          }
+        }
+      }
+    },
+    "data_mapping": {
+      "type": "object",
+      "description": "How data fields map between UMP and the external system.",
+      "properties": {
+        "inbound_mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_field", "target_field"],
+            "properties": {
+              "source_field": { "type": "string", "description": "Field path in external system response." },
+              "target_field": { "type": "string", "description": "Field path in UMP primitive." },
+              "transformation": {
+                "type": "string",
+                "enum": ["DIRECT", "FORMAT", "LOOKUP", "CALCULATE", "CONCATENATE", "SPLIT", "DEFAULT"],
+                "description": "Transformation to apply during mapping."
+              },
+              "transformation_config": { "type": "object", "additionalProperties": true },
+              "required": { "type": "boolean", "default": false }
+            }
+          }
+        },
+        "outbound_mappings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source_field", "target_field"],
+            "properties": {
+              "source_field": { "type": "string" },
+              "target_field": { "type": "string" },
+              "transformation": { "type": "string", "enum": ["DIRECT", "FORMAT", "LOOKUP", "CALCULATE", "CONCATENATE", "SPLIT", "DEFAULT"] },
+              "transformation_config": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      }
+    },
+    "sync_config": {
+      "type": "object",
+      "description": "Data synchronization settings.",
+      "properties": {
+        "sync_mode": {
+          "type": "string",
+          "enum": ["REAL_TIME", "SCHEDULED", "ON_DEMAND", "EVENT_DRIVEN"],
+          "description": "When synchronization occurs."
+        },
+        "schedule": {
+          "type": "object",
+          "description": "For SCHEDULED mode.",
+          "properties": {
+            "cron_expression": { "type": "string", "examples": ["0 */6 * * *", "0 0 1 * *"] },
+            "timezone": { "type": "string", "examples": ["UTC", "America/New_York"] }
+          }
+        },
+        "event_triggers": {
+          "type": "array",
+          "description": "For EVENT_DRIVEN mode: UMP events that trigger sync.",
+          "items": { "type": "string", "examples": ["ump.invoice.generated", "ump.payment.received"] }
+        },
+        "conflict_resolution": {
+          "type": "string",
+          "enum": ["UMP_WINS", "EXTERNAL_WINS", "MOST_RECENT", "MANUAL_REVIEW"],
+          "description": "How to resolve conflicting updates."
+        },
+        "deduplication": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "dedup_key_fields": { "type": "array", "items": { "type": "string" } },
+            "dedup_window_seconds": { "type": "integer", "default": 3600 }
+          }
+        }
+      }
+    },
+    "error_handling": {
+      "type": "object",
+      "properties": {
+        "on_connection_failure": {
+          "type": "string",
+          "enum": ["RETRY", "QUEUE", "SKIP", "ALERT"],
+          "default": "RETRY"
+        },
+        "on_data_validation_failure": {
+          "type": "string",
+          "enum": ["REJECT", "SKIP", "DEFAULT_VALUE", "QUARANTINE"],
+          "default": "QUARANTINE"
+        },
+        "dead_letter_queue": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "max_retention_days": { "type": "integer", "default": 30 },
+            "alert_threshold": { "type": "integer", "description": "Number of DLQ messages before alerting." }
+          }
+        },
+        "alerting": {
+          "type": "object",
+          "properties": {
+            "alert_channels": { "type": "array", "items": { "type": "string", "enum": ["EMAIL", "SLACK", "PAGERDUTY", "WEBHOOK"] } },
+            "alert_recipients": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "properties": {
+        "health_check": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "interval_seconds": { "type": "integer", "default": 300 },
+            "endpoint": { "type": "string" },
+            "expected_status": { "type": "integer", "default": 200 }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "track_latency": { "type": "boolean", "default": true },
+            "track_throughput": { "type": "boolean", "default": true },
+            "track_error_rate": { "type": "boolean", "default": true },
+            "retention_days": { "type": "integer", "default": 90 }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"]
+        },
+        "encryption_in_transit": { "type": "boolean", "default": true },
+        "ip_whitelist": {
+          "type": "array",
+          "items": { "type": "string", "format": "ipv4" },
+          "description": "Allowed IP addresses for inbound connections."
+        },
+        "data_masking": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "masked_fields": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "metadata": { "type": "object", "additionalProperties": true },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}

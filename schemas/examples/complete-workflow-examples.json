@@ -1,0 +1,591 @@
+{
+  "_comment": "UMP Protocol - Complete API Workflow Examples",
+  "_version": "1.0.0",
+  "_description": "End-to-end workflow examples demonstrating UMP API usage across all protocol layers",
+
+  "workflow_1_quote_to_cash": {
+    "title": "Quote-to-Cash: SaaS Company with Tiered API Pricing",
+    "description": "Complete flow from customer onboarding through billing and payment for a SaaS API product",
+
+    "step_1_create_value_unit": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/value-units",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIs...",
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": "idem_vu_api_calls_001"
+        },
+        "body": {
+          "vu_type": "USAGE_UNIT",
+          "denomination": "API_CALLS",
+          "precision": 0,
+          "display_name": "API Calls",
+          "display_symbol": "calls",
+          "transferability": "NON_TRANSFERABLE",
+          "metering_config": {
+            "aggregation_method": "SUM",
+            "aggregation_interval": "MONTHLY",
+            "minimum_billable_unit": 1
+          },
+          "compliance": {
+            "tax_category": "DIGITAL_SERVICE",
+            "gl_code": "4100",
+            "revenue_recognition_rule": "OVER_TIME"
+          },
+          "metadata": {
+            "product_line": "analytics_api",
+            "department": "engineering"
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Location": "/ump/v1/value-units/vu_7f3a9bc2-e1d4-4a5f-b8c7-9d2e1f3a4b5c",
+          "X-RateLimit-Limit": "1000",
+          "X-RateLimit-Remaining": "999"
+        },
+        "body": {
+          "vu_id": "vu_7f3a9bc2-e1d4-4a5f-b8c7-9d2e1f3a4b5c",
+          "vu_type": "USAGE_UNIT",
+          "denomination": "API_CALLS",
+          "precision": 0,
+          "status": "ACTIVE",
+          "created_at": "2026-02-17T10:00:00Z",
+          "created_by": "user_admin_001",
+          "_links": {
+            "self": "/ump/v1/value-units/vu_7f3a9bc2-e1d4-4a5f-b8c7-9d2e1f3a4b5c",
+            "pricing_rules": "/ump/v1/value-units/vu_7f3a9bc2/pricing-rules"
+          }
+        }
+      }
+    },
+
+    "step_2_create_customer_entity": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/entities",
+        "body": {
+          "entity_type": "ORGANIZATION",
+          "legal_name": "Acme Analytics Corporation",
+          "display_name": "Acme Analytics",
+          "classification": {
+            "industry": "TECHNOLOGY",
+            "segment": "MID_MARKET",
+            "tier": "GOLD"
+          },
+          "contact_info": {
+            "primary_email": "admin@acmeanalytics.com",
+            "billing_email": "billing@acmeanalytics.com",
+            "address": {
+              "line1": "100 Innovation Drive",
+              "city": "San Francisco",
+              "state": "CA",
+              "postal_code": "94105",
+              "country": "US"
+            }
+          },
+          "billing_config": {
+            "billing_currency": "USD",
+            "billing_cycle": "MONTHLY",
+            "payment_terms": "NET_30",
+            "invoice_delivery": "EMAIL",
+            "credit_limit": 50000
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "entity_id": "ent_acme_analytics_001",
+          "entity_type": "ORGANIZATION",
+          "status": "ACTIVE",
+          "legal_name": "Acme Analytics Corporation",
+          "created_at": "2026-02-17T10:05:00Z"
+        }
+      }
+    },
+
+    "step_3_create_tiered_pricing_rule": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/pricing-rules",
+        "body": {
+          "rule_type": "TIERED",
+          "name": "Analytics API - Tiered Pricing",
+          "description": "Graduated tiered pricing for API calls with volume discounts",
+          "service_id": "svc_analytics_api",
+          "currency": "USD",
+          "effective_from": "2026-03-01T00:00:00Z",
+          "tiered_config": {
+            "tier_mode": "GRADUATED",
+            "metering_dimension": "api_calls",
+            "tiers": [
+              { "tier_start": 0, "tier_end": 10000, "rate": 0.01, "flat_fee": 0 },
+              { "tier_start": 10001, "tier_end": 100000, "rate": 0.005, "flat_fee": 0 },
+              { "tier_start": 100001, "tier_end": 1000000, "rate": 0.002, "flat_fee": 0 },
+              { "tier_start": 1000001, "tier_end": null, "rate": 0.001, "flat_fee": 0 }
+            ]
+          },
+          "discount_rules": [
+            {
+              "discount_type": "VOLUME_REBATE",
+              "value": 5,
+              "conditions": {
+                "min_contract_term_months": 12,
+                "eligible_segments": ["ENTERPRISE", "MID_MARKET"]
+              },
+              "stackable": false,
+              "priority": 1
+            }
+          ],
+          "approval_requirements": {
+            "requires_approval": true,
+            "approval_levels": [
+              { "level": 1, "approver_role": "pricing_manager", "condition": "always" },
+              { "level": 2, "approver_role": "cfo", "condition": "discount > 15%" }
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "rule_id": "pr_tier_api_001",
+          "rule_type": "TIERED",
+          "status": "PENDING_APPROVAL",
+          "approval_gate": "/ump/v1/approvals/apg_002",
+          "created_at": "2026-02-17T10:10:00Z"
+        }
+      }
+    },
+
+    "step_4_create_contract": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/contracts",
+        "body": {
+          "contract_type": "USAGE",
+          "parties": [
+            { "entity_id": "ent_umpledger", "role": "SELLER" },
+            { "entity_id": "ent_acme_analytics_001", "role": "BUYER" }
+          ],
+          "pricing_terms": {
+            "pricing_rule_ids": ["pr_tier_api_001"],
+            "currency": "USD",
+            "base_amount": 99.00,
+            "base_amount_description": "Monthly platform access fee"
+          },
+          "sla_terms": [
+            {
+              "metric_name": "API_UPTIME",
+              "target_value": 99.95,
+              "measurement_period": "MONTHLY",
+              "penalty_type": "SERVICE_CREDIT",
+              "penalty_value": 10
+            }
+          ],
+          "payment_schedule": {
+            "billing_frequency": "MONTHLY",
+            "payment_terms": "NET_30",
+            "payment_methods": ["CREDIT_CARD", "ACH"]
+          },
+          "term": {
+            "start_date": "2026-03-01",
+            "end_date": "2027-02-28",
+            "auto_renew": true,
+            "notice_period_days": 30
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "contract_id": "ctr_acme_api_2026",
+          "contract_type": "USAGE",
+          "status": "ACTIVE",
+          "term": {
+            "start_date": "2026-03-01",
+            "end_date": "2027-02-28"
+          },
+          "created_at": "2026-02-17T10:15:00Z"
+        }
+      }
+    },
+
+    "step_5_submit_usage_events": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/usage-events",
+        "headers": {
+          "X-Idempotency-Key": "batch_20260301_acme_001"
+        },
+        "body": {
+          "events": [
+            {
+              "event_id": "evt_001_20260301",
+              "entity_id": "ent_acme_analytics_001",
+              "service_id": "svc_analytics_api",
+              "timestamp": "2026-03-01T00:00:00Z",
+              "quantity": 15234,
+              "unit": "API_CALLS",
+              "dimensions": {
+                "region": "us-east-1",
+                "tier": "standard",
+                "endpoint": "/v2/analyze"
+              },
+              "event_source": "API_PUSH"
+            },
+            {
+              "event_id": "evt_002_20260301",
+              "entity_id": "ent_acme_analytics_001",
+              "service_id": "svc_analytics_api",
+              "timestamp": "2026-03-01T12:00:00Z",
+              "quantity": 8921,
+              "unit": "API_CALLS",
+              "dimensions": {
+                "region": "us-east-1",
+                "tier": "premium",
+                "endpoint": "/v2/predict"
+              },
+              "event_source": "API_PUSH"
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 202,
+        "body": {
+          "batch_id": "batch_7e2f4a",
+          "events_accepted": 2,
+          "events_rejected": 0,
+          "processing_status": "QUEUED",
+          "estimated_processing_time_ms": 500
+        }
+      }
+    },
+
+    "step_6_generate_invoice": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/invoices/generate",
+        "body": {
+          "billing_period": {
+            "start": "2026-03-01T00:00:00Z",
+            "end": "2026-03-31T23:59:59Z"
+          },
+          "entity_ids": ["ent_acme_analytics_001"],
+          "include_usage_detail": true
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "invoice_id": "inv_acme_202603",
+          "invoice_number": "INV-2026-03-0042",
+          "invoice_type": "STANDARD",
+          "status": "DRAFT",
+          "billed_entity_id": "ent_acme_analytics_001",
+          "billing_period": {
+            "start": "2026-03-01T00:00:00Z",
+            "end": "2026-03-31T23:59:59Z"
+          },
+          "line_items": [
+            {
+              "line_item_id": "li_001",
+              "description": "Monthly Platform Access Fee",
+              "service_id": "svc_analytics_api",
+              "charge_type": "RECURRING",
+              "quantity": 1,
+              "unit_price": 99.00,
+              "amount": 99.00
+            },
+            {
+              "line_item_id": "li_002",
+              "description": "API Calls - Tier 1 (0 - 10,000 @ $0.01)",
+              "service_id": "svc_analytics_api",
+              "charge_type": "USAGE",
+              "quantity": 10000,
+              "unit_price": 0.01,
+              "amount": 100.00
+            },
+            {
+              "line_item_id": "li_003",
+              "description": "API Calls - Tier 2 (10,001 - 100,000 @ $0.005)",
+              "service_id": "svc_analytics_api",
+              "charge_type": "USAGE",
+              "quantity": 342567,
+              "unit_price": 0.005,
+              "amount": 1712.84
+            },
+            {
+              "line_item_id": "li_004",
+              "description": "API Calls - Tier 3 (100,001 - 1,000,000 @ $0.002)",
+              "service_id": "svc_analytics_api",
+              "charge_type": "USAGE",
+              "quantity": 148921,
+              "unit_price": 0.002,
+              "amount": 297.84
+            },
+            {
+              "line_item_id": "li_005",
+              "description": "Annual Commitment Volume Rebate (5%)",
+              "charge_type": "DISCOUNT",
+              "quantity": 1,
+              "unit_price": -105.53,
+              "amount": -105.53
+            }
+          ],
+          "tax_summary": [
+            {
+              "jurisdiction": "California",
+              "tax_type": "SALES_TAX",
+              "tax_rate": 8.625,
+              "taxable_amount": 2104.15,
+              "tax_amount": 181.48
+            }
+          ],
+          "totals": {
+            "subtotal": 2209.68,
+            "discount_total": -105.53,
+            "tax_total": 181.48,
+            "grand_total": 2285.63
+          },
+          "due_date": "2026-04-30",
+          "generated_at": "2026-04-01T06:00:00Z"
+        }
+      }
+    },
+
+    "step_7_process_payment": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/payments",
+        "body": {
+          "invoice_id": "inv_acme_202603",
+          "payment_method": "ACH",
+          "amount": 2285.63,
+          "currency": "USD",
+          "payment_reference": "ACH-TXN-20260415-8821"
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "payment_id": "pmt_acme_202603_001",
+          "status": "COMPLETED",
+          "amount": 2285.63,
+          "invoice_id": "inv_acme_202603",
+          "invoice_balance_remaining": 0.00,
+          "processed_at": "2026-04-15T14:30:00Z"
+        }
+      }
+    }
+  },
+
+  "workflow_2_multi_party_settlement": {
+    "title": "Multi-Party Ecosystem Settlement: Telecom Bundle",
+    "description": "Revenue settlement across telecom operator + banking partner + entertainment provider",
+
+    "step_1_initiate_settlement": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/settlements",
+        "body": {
+          "settlement_period": {
+            "start": "2026-03-01T00:00:00Z",
+            "end": "2026-03-31T23:59:59Z"
+          },
+          "allocation_method": "WATERFALL",
+          "parties": [
+            { "entity_id": "ent_telco_operator", "role": "ORCHESTRATOR" },
+            { "entity_id": "ent_bank_partner", "role": "SERVICE_PROVIDER" },
+            { "entity_id": "ent_streaming_provider", "role": "SERVICE_PROVIDER" }
+          ],
+          "waterfall_rules": [
+            {
+              "priority": 1,
+              "recipient_entity_id": "ent_telco_operator",
+              "allocation_type": "PERCENTAGE",
+              "allocation_value": 50,
+              "description": "Platform orchestration fee"
+            },
+            {
+              "priority": 2,
+              "recipient_entity_id": "ent_bank_partner",
+              "allocation_type": "PERCENTAGE",
+              "allocation_value": 30,
+              "description": "Banking services revenue share"
+            },
+            {
+              "priority": 3,
+              "recipient_entity_id": "ent_streaming_provider",
+              "allocation_type": "REMAINDER",
+              "description": "Entertainment services remainder"
+            }
+          ],
+          "source_invoices": ["inv_bundle_202603_001", "inv_bundle_202603_002"]
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "settlement_id": "stl_telco_202603",
+          "status": "CALCULATED",
+          "total_revenue": 485000.00,
+          "settlement_amounts": [
+            { "entity_id": "ent_telco_operator", "amount": 242500.00, "currency": "USD" },
+            { "entity_id": "ent_bank_partner", "amount": 145500.00, "currency": "USD" },
+            { "entity_id": "ent_streaming_provider", "amount": 97000.00, "currency": "USD" }
+          ],
+          "approval_chain": [
+            { "approver_role": "finance_manager", "status": "PENDING" },
+            { "approver_role": "cfo", "status": "PENDING" }
+          ],
+          "created_at": "2026-04-02T08:00:00Z"
+        }
+      }
+    }
+  },
+
+  "workflow_3_outcome_based_pricing": {
+    "title": "Outcome-Based Pricing: AI Customer Support Platform",
+    "description": "Pricing based on successfully resolved support tickets",
+
+    "step_1_create_outcome_pricing_rule": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/pricing-rules",
+        "body": {
+          "rule_type": "OUTCOME_BASED",
+          "name": "AI Support - Per Resolved Ticket",
+          "service_id": "svc_ai_support_platform",
+          "currency": "USD",
+          "effective_from": "2026-03-01T00:00:00Z",
+          "outcome_based_config": {
+            "outcome_metric": "tickets_resolved_successfully",
+            "measurement_method": "AI_SCORED",
+            "pricing_model": "TIERED_ACHIEVEMENT",
+            "performance_bands": [
+              { "band_name": "Standard", "threshold_min": 0, "threshold_max": 90, "rate": 2.00, "premium_multiplier": 1.0 },
+              { "band_name": "High Quality", "threshold_min": 90, "threshold_max": 95, "rate": 2.00, "premium_multiplier": 1.10 },
+              { "band_name": "Exceptional", "threshold_min": 95, "threshold_max": 100, "rate": 2.00, "premium_multiplier": 1.20 }
+            ],
+            "base_fee": 500.00,
+            "hybrid_transition": {
+              "phases": [
+                { "phase_name": "Onboarding", "start_month": 1, "end_month": 3, "base_fee_weight_pct": 70, "outcome_weight_pct": 30 },
+                { "phase_name": "Transition", "start_month": 4, "end_month": 6, "base_fee_weight_pct": 50, "outcome_weight_pct": 50 },
+                { "phase_name": "Full Outcome", "start_month": 7, "end_month": null, "base_fee_weight_pct": 30, "outcome_weight_pct": 70 }
+              ]
+            },
+            "validation_config": {
+              "validation_window_days": 7,
+              "minimum_confidence_score": 0.90,
+              "dispute_resolution_method": "MANUAL_REVIEW"
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 201,
+        "body": {
+          "rule_id": "pr_outcome_support_001",
+          "status": "PENDING_APPROVAL",
+          "created_at": "2026-02-20T09:00:00Z"
+        }
+      }
+    },
+
+    "step_2_simulate_pricing": {
+      "request": {
+        "method": "POST",
+        "url": "/ump/v1/pricing-rules/pr_outcome_support_001/simulate",
+        "body": {
+          "simulation_scenario": {
+            "entity_id": "ent_customer_x",
+            "period_months": 12,
+            "projected_usage": {
+              "monthly_tickets": 5000,
+              "resolution_rate": 93,
+              "average_confidence_score": 0.94
+            }
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "simulation_id": "sim_001",
+          "monthly_projections": [
+            { "month": 1, "base_component": 350.00, "outcome_component": 3300.00, "total": 3650.00, "note": "70/30 split phase" },
+            { "month": 4, "base_component": 250.00, "outcome_component": 5500.00, "total": 5750.00, "note": "50/50 split phase" },
+            { "month": 7, "base_component": 150.00, "outcome_component": 7700.00, "total": 7850.00, "note": "30/70 split phase" }
+          ],
+          "annual_projection": {
+            "total_revenue": 72600.00,
+            "vs_flat_rate": "+45%",
+            "customer_cost_per_resolution": 1.21
+          }
+        }
+      }
+    }
+  },
+
+  "workflow_4_ai_agent_recommendation": {
+    "title": "AI Agent: Pricing Optimization Recommendation",
+    "description": "Intelligence Layer agent analyzes customer data and recommends price adjustment",
+
+    "step_1_get_recommendations": {
+      "request": {
+        "method": "GET",
+        "url": "/ump/v1/agents/agent_pricing_optimizer/recommendations?entity_id=ent_acme_analytics_001&status=PENDING"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "agent_id": "agent_pricing_optimizer",
+          "agent_class": "PRICING_OPTIMIZER",
+          "recommendations": [
+            {
+              "recommendation_id": "rec_price_001",
+              "type": "PRICE_TIER_UPGRADE",
+              "priority": "HIGH",
+              "confidence_score": 0.91,
+              "entity_id": "ent_acme_analytics_001",
+              "current_state": {
+                "pricing_rule_id": "pr_tier_api_001",
+                "current_mrr": 2209.68,
+                "current_tier": "GOLD"
+              },
+              "recommended_action": {
+                "action": "UPGRADE_TO_ENTERPRISE_TIER",
+                "new_pricing_rule_id": "pr_enterprise_api_001",
+                "projected_mrr": 3450.00,
+                "projected_savings_for_customer": "12%"
+              },
+              "rationale": {
+                "summary": "Customer usage pattern indicates enterprise-grade consumption. Moving to enterprise tier provides volume discounts saving customer 12% while increasing committed MRR by 56%.",
+                "supporting_data": [
+                  "API usage grew 340% over last 3 months",
+                  "Customer consistently exceeds Tier 2 threshold",
+                  "Competitor analysis shows enterprise pricing at $3,800/month",
+                  "Customer satisfaction score: 92/100"
+                ]
+              },
+              "impact_estimate": {
+                "revenue_impact_annual": 14883.84,
+                "retention_risk_change": "-15%",
+                "customer_ltv_impact": "+$48,000"
+              },
+              "approval_required": true,
+              "approval_gate": "/ump/v1/approvals/apg_rec_001",
+              "expires_at": "2026-03-24T23:59:59Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/invoice.schema.json",
+  "title": "UMP Invoice",
+  "description": "Represents a billing document issued by one entity to another. Invoices aggregate usage, pricing, and taxes for a specific billing period and serve as the basis for payment collection and financial reporting.",
+  "type": "object",
+  "required": [
+    "invoice_id",
+    "invoice_number",
+    "invoice_type",
+    "billing_entity_id",
+    "billed_entity_id",
+    "billing_period",
+    "created_at"
+  ],
+  "properties": {
+    "invoice_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this invoice."
+    },
+    "invoice_number": {
+      "type": "string",
+      "description": "Human-readable invoice number for accounting and reference.",
+      "examples": [
+        "INV-2025-001234",
+        "FACTURE-2025-2301"
+      ]
+    },
+    "invoice_type": {
+      "type": "string",
+      "enum": [
+        "STANDARD",
+        "PROFORMA",
+        "CREDIT_NOTE",
+        "DEBIT_NOTE",
+        "FINAL",
+        "RECURRING"
+      ],
+      "description": "Type of invoice. STANDARD: regular billing. PROFORMA: advance billing/estimate. CREDIT_NOTE: reduction/reversal. DEBIT_NOTE: increase/correction. FINAL: contract completion. RECURRING: subscription billing."
+    },
+    "billing_entity_id": {
+      "type": "string",
+      "description": "Entity issuing/responsible for the invoice (seller)."
+    },
+    "billing_entity_name": {
+      "type": "string",
+      "description": "Legal name of billing entity."
+    },
+    "billed_entity_id": {
+      "type": "string",
+      "description": "Entity receiving the invoice (buyer/customer)."
+    },
+    "billed_entity_name": {
+      "type": "string",
+      "description": "Legal name of billed entity."
+    },
+    "billing_period": {
+      "type": "object",
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "description": "Date range for usage included in this invoice.",
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "invoice_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date invoice was generated."
+    },
+    "line_items": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Itemized charges and credits.",
+      "items": {
+        "$ref": "#/$defs/LineItem"
+      }
+    },
+    "tax_details": {
+      "type": "object",
+      "description": "Tax calculations and breakdowns.",
+      "properties": {
+        "subtotal": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Sum of all line item amounts before tax."
+        },
+        "tax_items": {
+          "type": "array",
+          "description": "Tax charges by jurisdiction and type.",
+          "items": {
+            "$ref": "#/$defs/TaxItem"
+          }
+        },
+        "tax_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total tax amount."
+        },
+        "tax_exempt": {
+          "type": "boolean",
+          "description": "Whether invoice is tax-exempt."
+        },
+        "tax_exempt_reason": {
+          "type": "string",
+          "examples": [
+            "non_profit",
+            "reseller",
+            "government",
+            "export"
+          ]
+        },
+        "tax_exempt_certificate_id": {
+          "type": "string",
+          "description": "Reference to supporting tax exemption documentation."
+        }
+      }
+    },
+    "discounts": {
+      "type": "array",
+      "description": "Applied discounts and adjustments.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "discount_id": {
+            "type": "string"
+          },
+          "discount_type": {
+            "type": "string",
+            "enum": [
+              "PERCENTAGE",
+              "FIXED_AMOUNT",
+              "VOLUME_REBATE",
+              "LOYALTY_REWARD",
+              "PROMOTIONAL",
+              "CONTRACT_DISCOUNT",
+              "EARLY_PAYMENT"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "totals": {
+      "type": "object",
+      "required": [
+        "subtotal",
+        "tax_total",
+        "grand_total"
+      ],
+      "description": "Invoice summary totals.",
+      "properties": {
+        "subtotal": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Sum of line items before tax and discounts."
+        },
+        "discount_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total discounts applied."
+        },
+        "subtotal_after_discounts": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Subtotal minus discounts."
+        },
+        "tax_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total tax."
+        },
+        "grand_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Final amount due (subtotal + tax - discounts)."
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "ISO 4217 currency code."
+        }
+      }
+    },
+    "payment_terms": {
+      "type": "object",
+      "description": "Payment expectations and deadlines.",
+      "properties": {
+        "due_date": {
+          "type": "string",
+          "format": "date",
+          "description": "When payment is due."
+        },
+        "payment_terms_description": {
+          "type": "string",
+          "examples": [
+            "Net 30",
+            "Due upon receipt",
+            "2/10 Net 30"
+          ]
+        },
+        "accepted_payment_methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "BANK_TRANSFER",
+              "CREDIT_CARD",
+              "ACH",
+              "CHECK",
+              "WIRE",
+              "CRYPTO",
+              "OFFSET"
+            ]
+          }
+        },
+        "payment_instructions": {
+          "type": "string",
+          "description": "Detailed payment instructions for the billed entity."
+        }
+      }
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SENT",
+        "VIEWED",
+        "PARTIALLY_PAID",
+        "PAID",
+        "OVERDUE",
+        "DISPUTE_PENDING",
+        "VOID",
+        "REVERSED"
+      ],
+      "description": "Current payment status. DRAFT: not yet issued. SENT: transmitted. VIEWED: customer acknowledged. PARTIALLY_PAID: partial payment received. PAID: fully settled. OVERDUE: past due date. DISPUTE_PENDING: payment disputed. VOID/REVERSED: cancelled."
+    },
+    "payment_received": {
+      "type": "object",
+      "description": "Payment receipt tracking.",
+      "properties": {
+        "amount_paid": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total amount paid to date."
+        },
+        "amount_outstanding": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Remaining balance."
+        },
+        "payments": {
+          "type": "array",
+          "description": "Individual payment records.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "payment_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "payment_date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "payment_method": {
+                "type": "string"
+              },
+              "reference": {
+                "type": "string",
+                "description": "Payment reference/check number."
+              },
+              "applied_to": {
+                "type": "string",
+                "description": "Which line items this payment is applied to."
+              }
+            }
+          }
+        },
+        "last_payment_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "supporting_documents": {
+      "type": "array",
+      "description": "References to supporting documentation.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "document_type": {
+            "type": "string",
+            "enum": [
+              "USAGE_REPORT",
+              "SLA_REPORT",
+              "AGREEMENT",
+              "AMENDMENT",
+              "TAX_CERTIFICATE",
+              "SUPPORTING_INVOICE",
+              "CREDIT_NOTE",
+              "OTHER"
+            ]
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "document_reference": {
+            "type": "string",
+            "description": "File name or external reference."
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Additional invoice notes or comments."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible domain-specific attributes."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When invoice was created."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When invoice was last modified."
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When invoice was transmitted to customer."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Invoice schema version."
+    }
+  },
+  "$defs": {
+    "LineItem": {
+      "type": "object",
+      "required": [
+        "line_item_id",
+        "description",
+        "quantity",
+        "unit_rate",
+        "amount"
+      ],
+      "description": "Individual charge line.",
+      "properties": {
+        "line_item_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": {
+          "type": "string",
+          "description": "What is being charged."
+        },
+        "service_id": {
+          "type": "string",
+          "description": "Service associated with this line."
+        },
+        "pricing_rule_id": {
+          "type": "string",
+          "description": "Pricing rule used for this line."
+        },
+        "quantity": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Amount consumed."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement."
+        },
+        "unit_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Price per unit."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Total for this line (quantity × unit_rate + adjustments)."
+        },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Multi-dimensional attributes for this charge."
+        },
+        "discount_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Discount applied to this line."
+        },
+        "tax_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Tax rate applicable to this line."
+        },
+        "tax_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tax on this line amount."
+        },
+        "line_total": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Amount + tax for this line."
+        }
+      }
+    },
+    "TaxItem": {
+      "type": "object",
+      "required": [
+        "tax_jurisdiction",
+        "tax_type",
+        "rate"
+      ],
+      "description": "Tax charge for a jurisdiction and type.",
+      "properties": {
+        "tax_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tax_jurisdiction": {
+          "type": "string",
+          "examples": [
+            "US-CA",
+            "US-NY",
+            "EU-IE",
+            "GB-ENG"
+          ]
+        },
+        "tax_type": {
+          "type": "string",
+          "enum": [
+            "VAT",
+            "GST",
+            "HST",
+            "PST",
+            "SALES_TAX",
+            "INCOME_TAX",
+            "OTHER"
+          ]
+        },
+        "taxable_base": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Amount tax is calculated on."
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Tax rate percentage."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Calculated tax amount."
+        },
+        "tax_registration_id": {
+          "type": "string",
+          "description": "Tax ID of billing entity in this jurisdiction."
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "invoice_id": "inv_f4e9c1b3-d5a8-4f2e-b3c7-9e2d1f5a4b7c",
+      "invoice_number": "INV-2025-001234",
+      "invoice_type": "STANDARD",
+      "billing_entity_id": "seller_001",
+      "billing_entity_name": "CloudComputeCorp",
+      "billed_entity_id": "cust_12345",
+      "billed_entity_name": "TechStartup Inc",
+      "billing_period": {
+        "start_date": "2025-02-01",
+        "end_date": "2025-02-28"
+      },
+      "invoice_date": "2025-03-01",
+      "line_items": [
+        {
+          "line_item_id": "li_001",
+          "description": "GPU Compute - H100 Hours (High Priority)",
+          "service_id": "svc_gpu",
+          "quantity": 120,
+          "unit": "GPU_HOURS",
+          "unit_rate": 2.5,
+          "amount": 300,
+          "dimensions": {
+            "region": "us-east-1",
+            "gpu_model": "H100"
+          }
+        }
+      ],
+      "totals": {
+        "subtotal": 300,
+        "tax_total": 24,
+        "grand_total": 324,
+        "currency": "USD"
+      },
+      "payment_status": "SENT",
+      "payment_terms": {
+        "due_date": "2025-03-31",
+        "payment_terms_description": "Net 30"
+      }
+    }
+  ]
+}

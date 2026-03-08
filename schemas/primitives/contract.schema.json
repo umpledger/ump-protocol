@@ -1,0 +1,651 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/contract.schema.json",
+  "title": "UMP Contract",
+  "description": "Defines the terms, conditions, and lifecycle of monetization agreements between parties. Contracts establish the foundation for all billing, settlement, and compliance operations.",
+  "type": "object",
+  "required": [
+    "contract_id",
+    "contract_type",
+    "status",
+    "parties",
+    "created_at"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this contract.",
+      "examples": [
+        "ct_a7f4c9e2-d2f5-4b8e-c1d9-7e3f2a8b4c6d"
+      ]
+    },
+    "contract_type": {
+      "type": "string",
+      "enum": [
+        "SUBSCRIPTION",
+        "USAGE",
+        "OUTCOME",
+        "HYBRID",
+        "FRAMEWORK"
+      ],
+      "description": "Defines the primary billing model. SUBSCRIPTION for recurring charges, USAGE for consumption-based, OUTCOME for results-based, HYBRID combining multiple models, FRAMEWORK for master agreements with terms."
+    },
+    "contract_name": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Human-readable contract identifier for administration and reporting."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Detailed summary of contract terms and scope."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "PENDING_APPROVAL",
+        "ACTIVE",
+        "AMENDED",
+        "RENEWED",
+        "TERMINATED",
+        "SUSPENDED"
+      ],
+      "description": "Lifecycle status. DRAFT: not yet finalized. PENDING_APPROVAL: awaiting authorization. ACTIVE: currently binding. AMENDED: modifications in effect. RENEWED: extended term. TERMINATED: ended. SUSPENDED: temporarily halted."
+    },
+    "parties": {
+      "type": "array",
+      "minItems": 2,
+      "description": "All entities involved in the contract.",
+      "items": {
+        "$ref": "#/$defs/ContractParty"
+      }
+    },
+    "contract_dates": {
+      "type": "object",
+      "required": [
+        "execution_date",
+        "effective_date",
+        "end_date"
+      ],
+      "description": "Key dates for contract lifecycle.",
+      "properties": {
+        "execution_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When contract was signed/agreed."
+        },
+        "effective_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When contract terms become active."
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Contract expiration date."
+        },
+        "review_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Date for contract review and renewal consideration."
+        }
+      }
+    },
+    "pricing_terms": {
+      "type": "object",
+      "description": "Pricing configuration and rules.",
+      "properties": {
+        "pricing_rule_ids": {
+          "type": "array",
+          "description": "References to applicable pricing rules.",
+          "items": {
+            "type": "string",
+            "description": "Pricing rule identifier."
+          }
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "ISO 4217 currency code for all charges."
+        },
+        "base_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum/base charge per billing period."
+        },
+        "annual_commitment": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Minimum annual spend commitment. Null for no commitment."
+        },
+        "discount_percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Contract-wide discount applied to all charges."
+        },
+        "price_escalation": {
+          "type": "object",
+          "description": "Automatic price increase rules.",
+          "properties": {
+            "escalation_enabled": {
+              "type": "boolean"
+            },
+            "escalation_type": {
+              "type": "string",
+              "enum": [
+                "PERCENTAGE",
+                "FIXED_AMOUNT",
+                "CPI_INDEXED"
+              ]
+            },
+            "escalation_rate": {
+              "type": "number",
+              "minimum": 0
+            },
+            "escalation_frequency": {
+              "type": "string",
+              "enum": [
+                "ANNUAL",
+                "QUARTERLY",
+                "SEMI_ANNUAL"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "sla_terms": {
+      "type": "object",
+      "description": "Service Level Agreement definitions and penalties.",
+      "properties": {
+        "sla_enabled": {
+          "type": "boolean"
+        },
+        "metrics": {
+          "type": "array",
+          "description": "Measured SLA metrics.",
+          "items": {
+            "$ref": "#/$defs/SLAMetric"
+          }
+        },
+        "measurement_period": {
+          "type": "string",
+          "enum": [
+            "HOURLY",
+            "DAILY",
+            "WEEKLY",
+            "MONTHLY",
+            "QUARTERLY",
+            "ANNUAL"
+          ],
+          "description": "Period over which SLA is measured."
+        },
+        "reporting_frequency": {
+          "type": "string",
+          "enum": [
+            "WEEKLY",
+            "MONTHLY",
+            "QUARTERLY"
+          ]
+        }
+      }
+    },
+    "payment_schedule": {
+      "type": "object",
+      "description": "Payment terms and schedule.",
+      "properties": {
+        "billing_frequency": {
+          "type": "string",
+          "enum": [
+            "ONE_TIME",
+            "WEEKLY",
+            "MONTHLY",
+            "QUARTERLY",
+            "SEMI_ANNUAL",
+            "ANNUAL"
+          ],
+          "description": "How often invoices are generated."
+        },
+        "payment_terms_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Net-X terms (days after invoice before payment due).",
+          "examples": [
+            0,
+            15,
+            30,
+            45,
+            60
+          ]
+        },
+        "payment_methods": {
+          "type": "array",
+          "description": "Accepted payment methods.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "BANK_TRANSFER",
+              "CREDIT_CARD",
+              "ACH",
+              "CHECK",
+              "WIRE",
+              "CRYPTO",
+              "OFFSET"
+            ]
+          }
+        },
+        "late_payment_interest": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Interest rate (% per month) on overdue amounts."
+        },
+        "early_payment_discount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Discount offered if paid before due date."
+        }
+      }
+    },
+    "renewal_config": {
+      "type": "object",
+      "description": "Automatic renewal and term extension configuration.",
+      "properties": {
+        "auto_renew_enabled": {
+          "type": "boolean",
+          "description": "Whether contract auto-renews at expiration."
+        },
+        "renewal_term_months": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Length of renewed term in months."
+        },
+        "cancellation_notice_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Days before expiration to notify cancellation intent."
+        },
+        "renewal_pricing_adjustment": {
+          "type": "object",
+          "description": "Pricing changes on renewal.",
+          "properties": {
+            "adjustment_type": {
+              "type": "string",
+              "enum": [
+                "SAME_AS_CURRENT",
+                "PERCENTAGE_INCREASE",
+                "FIXED_AMOUNT_INCREASE",
+                "RENEGOTIATE"
+              ]
+            },
+            "adjustment_value": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "amendment_history": {
+      "type": "array",
+      "description": "Complete history of contract modifications.",
+      "items": {
+        "$ref": "#/$defs/Amendment"
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Compliance and regulatory requirements.",
+      "properties": {
+        "compliance_requirements": {
+          "type": "array",
+          "description": "Applicable compliance standards.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GDPR",
+              "CCPA",
+              "HIPAA",
+              "PCI_DSS",
+              "SOC2",
+              "ISO27001",
+              "CUSTOM"
+            ]
+          }
+        },
+        "data_processing_terms": {
+          "type": "object",
+          "properties": {
+            "data_controller": {
+              "type": "string",
+              "description": "Entity responsible for data processing."
+            },
+            "data_processor": {
+              "type": "string"
+            },
+            "processing_location": {
+              "type": "string",
+              "description": "Geographic region(s) where data is processed."
+            },
+            "retention_period_days": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "liability_cap": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum liability exposure for either party."
+        },
+        "governing_law": {
+          "type": "string",
+          "description": "Jurisdiction governing contract interpretation.",
+          "examples": [
+            "US-California",
+            "US-New York",
+            "EU-Ireland",
+            "GB-England"
+          ]
+        },
+        "dispute_resolution": {
+          "type": "string",
+          "enum": [
+            "NEGOTIATION",
+            "MEDIATION",
+            "ARBITRATION",
+            "LITIGATION"
+          ]
+        }
+      }
+    },
+    "termination_terms": {
+      "type": "object",
+      "description": "Conditions and procedures for contract termination.",
+      "properties": {
+        "termination_for_cause": {
+          "type": "array",
+          "description": "Events triggering termination without penalty.",
+          "items": {
+            "type": "string",
+            "examples": [
+              "material_breach",
+              "insolvency",
+              "regulatory_violation",
+              "force_majeure"
+            ]
+          }
+        },
+        "termination_for_convenience": {
+          "type": "object",
+          "properties": {
+            "allowed": {
+              "type": "boolean"
+            },
+            "notice_days": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "early_termination_fee": {
+              "type": ["number", "null"],
+              "minimum": 0
+            }
+          }
+        },
+        "wind_down_period_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Days allowed for orderly service transition."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible key-value pairs for domain-specific attributes."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of creation."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Entity ID of the creator."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version for this contract."
+    }
+  },
+  "$defs": {
+    "ContractParty": {
+      "type": "object",
+      "required": [
+        "entity_id",
+        "entity_type",
+        "role"
+      ],
+      "description": "A party to the contract.",
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "description": "Unique identifier for this entity."
+        },
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ORGANIZATION",
+            "INDIVIDUAL",
+            "RESELLER",
+            "PARTNER",
+            "PLATFORM"
+          ]
+        },
+        "legal_name": {
+          "type": "string",
+          "description": "Official legal name."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "BUYER",
+            "SELLER",
+            "PARTNER"
+          ],
+          "description": "Party's role in the agreement."
+        },
+        "contact_email": {
+          "type": "string",
+          "format": "email"
+        },
+        "address": {
+          "type": "object",
+          "properties": {
+            "street": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "state": {
+              "type": "string"
+            },
+            "postal_code": {
+              "type": "string"
+            },
+            "country": {
+              "type": "string"
+            }
+          }
+        },
+        "authorized_signatories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "signed_date": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "payment_recipient_account": {
+          "type": "string",
+          "description": "Bank account or payment identifier for receiving payments (encrypted)."
+        }
+      }
+    },
+    "SLAMetric": {
+      "type": "object",
+      "required": [
+        "metric_name",
+        "threshold",
+        "penalty_type"
+      ],
+      "description": "Service level metric with targets and penalties.",
+      "properties": {
+        "metric_name": {
+          "type": "string",
+          "examples": [
+            "availability",
+            "response_time_ms",
+            "error_rate",
+            "throughput_rps"
+          ]
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Target value for this metric."
+        },
+        "unit": {
+          "type": "string",
+          "examples": [
+            "%",
+            "ms",
+            "rps",
+            "seconds"
+          ]
+        },
+        "measurement_method": {
+          "type": "string",
+          "enum": [
+            "AUTOMATED",
+            "MANUAL",
+            "THIRD_PARTY"
+          ]
+        },
+        "penalty_type": {
+          "type": "string",
+          "enum": [
+            "SERVICE_CREDIT",
+            "REBATE",
+            "SUSPENSION",
+            "TERMINATION"
+          ]
+        },
+        "penalty_value": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "enum": [
+                "PERCENTAGE",
+                "FIXED_AMOUNT",
+                "DAYS"
+              ]
+            }
+          }
+        },
+        "minimum_threshold_breach": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Severity of breach (%) before penalty applies."
+        }
+      }
+    },
+    "Amendment": {
+      "type": "object",
+      "required": [
+        "amendment_id",
+        "amendment_date",
+        "amendment_type"
+      ],
+      "description": "A contract modification record.",
+      "properties": {
+        "amendment_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "amendment_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "amendment_type": {
+          "type": "string",
+          "enum": [
+            "PRICE_CHANGE",
+            "TERM_EXTENSION",
+            "SCOPE_MODIFICATION",
+            "PARTY_CHANGE",
+            "SLA_UPDATE",
+            "COMPLIANCE_UPDATE",
+            "OTHER"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Summary of changes made."
+        },
+        "effective_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "amendments_made": {
+          "type": "array",
+          "description": "Specific changes applied.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "field_path": {
+                "type": "string",
+                "examples": [
+                  "pricing_terms.base_amount",
+                  "parties[0].contact_email",
+                  "sla_terms.metrics[0].threshold"
+                ]
+              },
+              "old_value": {},
+              "new_value": {}
+            }
+          }
+        },
+        "approved_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

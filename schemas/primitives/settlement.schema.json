@@ -1,0 +1,599 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/settlement.schema.json",
+  "title": "UMP Settlement",
+  "description": "Allocates and distributes revenue among multiple parties according to agreed rules. Settlements handle complex multi-party scenarios including waterfall distributions, proportional splits, and escrow arrangements.",
+  "type": "object",
+  "required": [
+    "settlement_id",
+    "settlement_period",
+    "allocation_method",
+    "parties",
+    "status",
+    "created_at"
+  ],
+  "properties": {
+    "settlement_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this settlement."
+    },
+    "settlement_period": {
+      "type": "object",
+      "required": [
+        "start_date",
+        "end_date"
+      ],
+      "description": "Time period covered by this settlement.",
+      "properties": {
+        "start_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "end_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "settlement_cycle": {
+          "type": "string",
+          "enum": [
+            "WEEKLY",
+            "BIWEEKLY",
+            "MONTHLY",
+            "QUARTERLY",
+            "ANNUAL",
+            "ON_DEMAND"
+          ]
+        }
+      }
+    },
+    "allocation_method": {
+      "type": "string",
+      "enum": [
+        "BILATERAL",
+        "WATERFALL",
+        "PROPORTIONAL",
+        "PERFORMANCE_BASED",
+        "ESCROW",
+        "CUSTOM"
+      ],
+      "description": "Algorithm for allocating revenue. BILATERAL: two parties only. WATERFALL: priority-based distribution. PROPORTIONAL: based on shares. PERFORMANCE_BASED: tied to metrics. ESCROW: held pending conditions. CUSTOM: domain-specific logic."
+    },
+    "total_revenue": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total amount to be distributed."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "ISO 4217 currency code."
+    },
+    "parties": {
+      "type": "array",
+      "minItems": 2,
+      "description": "Parties receiving distribution.",
+      "items": {
+        "$ref": "#/$defs/SettlementParty"
+      }
+    },
+    "waterfall_rules": {
+      "type": "object",
+      "description": "Priority-based distribution configuration.",
+      "properties": {
+        "levels": {
+          "type": "array",
+          "description": "Distribution priority levels.",
+          "items": {
+            "$ref": "#/$defs/WaterfallLevel"
+          }
+        },
+        "rounding_method": {
+          "type": "string",
+          "enum": [
+            "UP",
+            "DOWN",
+            "NEAREST",
+            "BANKERS"
+          ]
+        }
+      }
+    },
+    "settlement_amounts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "party_id": {
+            "type": "string"
+          },
+          "gross_amount": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Allocated amount before deductions."
+          },
+          "adjustments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "adjustment_type": {
+                  "type": "string",
+                  "enum": [
+                    "HOLDBACK",
+                    "RESERVE",
+                    "CHARGEBACK",
+                    "TAX_WITHHOLDING",
+                    "REBATE",
+                    "BONUS"
+                  ]
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "total_deductions": {
+            "type": "number",
+            "minimum": 0
+          },
+          "net_amount": {
+            "type": "number",
+            "description": "Final settlement amount (gross - deductions)."
+          }
+        }
+      },
+      "description": "Calculated settlement amounts per party."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "CALCULATED",
+        "PENDING_APPROVAL",
+        "APPROVED",
+        "SCHEDULED",
+        "EXECUTED",
+        "RECONCILED",
+        "DISPUTE_PENDING",
+        "REVERSED"
+      ],
+      "description": "Settlement lifecycle status. CALCULATED: amounts determined. PENDING_APPROVAL: awaiting authorization. APPROVED: ready to execute. SCHEDULED: execution planned. EXECUTED: payments sent. RECONCILED: verified complete. DISPUTE_PENDING: contested. REVERSED: cancelled."
+    },
+    "approval": {
+      "type": "object",
+      "description": "Approval tracking.",
+      "properties": {
+        "approval_required": {
+          "type": "boolean"
+        },
+        "approvals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "approver_id": {
+                "type": "string"
+              },
+              "approver_role": {
+                "type": "string"
+              },
+              "approval_date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "approval_status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "APPROVED",
+                  "REJECTED"
+                ]
+              },
+              "comments": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "Execution and payment details.",
+      "properties": {
+        "execution_method": {
+          "type": "string",
+          "enum": [
+            "BATCH_TRANSFER",
+            "INDIVIDUAL_PAYMENTS",
+            "OFFSET",
+            "ESCROW_RELEASE",
+            "MANUAL"
+          ]
+        },
+        "scheduled_execution_date": {
+          "type": "string",
+          "format": "date"
+        },
+        "actual_execution_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payment_references": {
+          "type": "array",
+          "description": "Payment/transfer references.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "party_id": {
+                "type": "string"
+              },
+              "payment_id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "payment_date": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "COMPLETED",
+                  "FAILED",
+                  "REVERSED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "description": "Settlement reconciliation and verification.",
+      "properties": {
+        "reconciliation_status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "IN_PROGRESS",
+            "RECONCILED",
+            "DISCREPANCIES_FOUND",
+            "APPROVED"
+          ]
+        },
+        "reconciliation_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reconciliation_results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "party_id": {
+                "type": "string"
+              },
+              "expected_amount": {
+                "type": "number"
+              },
+              "actual_amount": {
+                "type": "number"
+              },
+              "variance": {
+                "type": "number"
+              },
+              "variance_pct": {
+                "type": "number"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "MATCH",
+                  "DISCREPANCY",
+                  "PENDING_VERIFICATION"
+                ]
+              }
+            }
+          }
+        },
+        "total_variance": {
+          "type": "number"
+        },
+        "reconciled_by": {
+          "type": "string"
+        }
+      }
+    },
+    "escrow_config": {
+      "type": "object",
+      "description": "Configuration if using escrow allocation method.",
+      "properties": {
+        "escrow_account_id": {
+          "type": "string",
+          "description": "Account holding escrowed funds."
+        },
+        "escrow_agent": {
+          "type": "string",
+          "description": "Third party managing escrow."
+        },
+        "release_conditions": {
+          "type": "array",
+          "description": "Conditions triggering escrow release.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "condition_type": {
+                "type": "string",
+                "enum": [
+                  "TIME_BASED",
+                  "MILESTONE_BASED",
+                  "APPROVAL_BASED",
+                  "PERFORMANCE_BASED"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "target_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "release_percentage": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        },
+        "release_schedule": {
+          "type": "array",
+          "description": "Planned release amounts and dates.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "release_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "release_amount": {
+                "type": "number"
+              },
+              "release_status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "RELEASED",
+                  "HELD"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "supporting_documents": {
+      "type": "array",
+      "description": "References to supporting documentation.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "document_type": {
+            "type": "string",
+            "enum": [
+              "INVOICE",
+              "USAGE_REPORT",
+              "PAYMENT_PROOF",
+              "CONTRACT",
+              "AUDIT_REPORT",
+              "OTHER"
+            ]
+          },
+          "document_id": {
+            "type": "string"
+          },
+          "document_reference": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible domain-specific attributes."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$defs": {
+    "SettlementParty": {
+      "type": "object",
+      "required": [
+        "party_id",
+        "party_type"
+      ],
+      "description": "Party receiving settlement allocation.",
+      "properties": {
+        "party_id": {
+          "type": "string",
+          "description": "Unique identifier for party."
+        },
+        "party_type": {
+          "type": "string",
+          "enum": [
+            "SELLER",
+            "BUYER",
+            "PARTNER",
+            "RESELLER",
+            "PLATFORM"
+          ]
+        },
+        "party_name": {
+          "type": "string"
+        },
+        "allocation_type": {
+          "type": "string",
+          "enum": [
+            "FIXED_PERCENTAGE",
+            "FIXED_AMOUNT",
+            "FORMULA",
+            "PERFORMANCE_BASED",
+            "WATERFALL_PRIORITY"
+          ]
+        },
+        "allocation_value": {
+          "type": "number",
+          "description": "Share value (percentage or amount)."
+        },
+        "allocation_priority": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Distribution priority (lower = earlier in waterfall)."
+        },
+        "minimum_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum allocation regardless of formula."
+        },
+        "maximum_amount": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Maximum allocation cap."
+        },
+        "calculation_formula": {
+          "type": "string",
+          "description": "Custom formula for allocation (if FORMULA type).",
+          "examples": [
+            "revenue * 0.25",
+            "max(base_fee, revenue * 0.15)"
+          ]
+        },
+        "performance_metrics": {
+          "type": "array",
+          "description": "Performance-based allocation triggers.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "metric_name": {
+                "type": "string"
+              },
+              "threshold": {
+                "type": "number"
+              },
+              "allocation_adjustment": {
+                "type": "number",
+                "description": "Allocation change if metric met."
+              }
+            }
+          }
+        },
+        "account_details": {
+          "type": "object",
+          "properties": {
+            "account_type": {
+              "type": "string",
+              "enum": [
+                "BANK_ACCOUNT",
+                "CREDIT_CARD",
+                "PAYMENT_GATEWAY",
+                "INTERNAL_ACCOUNT",
+                "CRYPTO_WALLET",
+                "OFFSET"
+              ]
+            },
+            "account_identifier": {
+              "type": "string",
+              "description": "Account number or identifier (encrypted)."
+            },
+            "account_currency": {
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
+          }
+        }
+      }
+    },
+    "WaterfallLevel": {
+      "type": "object",
+      "required": [
+        "level",
+        "party_id",
+        "amount"
+      ],
+      "description": "Priority level in waterfall distribution.",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Distribution sequence (1 = first)."
+        },
+        "party_id": {
+          "type": "string",
+          "description": "Party receiving at this level."
+        },
+        "amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Fixed amount or percentage at this level."
+        },
+        "amount_type": {
+          "type": "string",
+          "enum": [
+            "FIXED",
+            "PERCENTAGE",
+            "REMAINING"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "examples": [
+            "Platform fee (15%)",
+            "Partner revenue share (30% of remainder)"
+          ]
+        },
+        "conditions": {
+          "type": "array",
+          "description": "Conditional rules for this level.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "condition": {
+                "type": "string",
+                "examples": [
+                  "total_revenue > 10000",
+                  "performance_score >= 0.8"
+                ]
+              },
+              "action": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

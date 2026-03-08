@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/pricing-rule.schema.json",
+  "title": "UMP Pricing Rule",
+  "description": "Defines how a Service Entity is priced. Supports 10+ native pricing models with extensibility for custom models.",
+  "type": "object",
+  "required": ["rule_id", "rule_type", "name", "service_id", "status", "effective_from"],
+  "properties": {
+    "rule_id": {
+      "type": "string",
+      "format": "uuid",
+      "examples": ["pr_9a4c3b2e-f1d5-4a6f-b9c8"]
+    },
+    "rule_type": {
+      "type": "string",
+      "enum": [
+        "FLAT_RATE", "TIERED", "VOLUME", "USAGE_BASED", "ATTRIBUTE_BASED",
+        "OUTCOME_BASED", "DYNAMIC", "RELATIONSHIP", "HYBRID", "BUNDLE", "CUSTOM"
+      ],
+      "description": "The pricing model type. Determines which configuration block is required."
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Human-readable rule name for administration."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Detailed description of pricing logic."
+    },
+    "service_id": {
+      "type": "string",
+      "description": "The Service Entity this rule prices."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "PENDING_APPROVAL", "ACTIVE", "SUSPENDED", "DEPRECATED", "ARCHIVED"]
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this pricing rule becomes effective."
+    },
+    "effective_to": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When this pricing rule expires. Null for indefinite."
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "description": "ISO 4217 currency code for prices."
+    },
+    "flat_rate_config": {
+      "type": "object",
+      "description": "Configuration for FLAT_RATE pricing.",
+      "properties": {
+        "amount": { "type": "number", "minimum": 0 },
+        "frequency": {
+          "type": "string",
+          "enum": ["ONE_TIME", "PER_UNIT", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"]
+        }
+      }
+    },
+    "tiered_config": {
+      "type": "object",
+      "description": "Configuration for TIERED pricing (graduated tiers).",
+      "properties": {
+        "tier_mode": {
+          "type": "string",
+          "enum": ["GRADUATED", "VOLUME"],
+          "description": "GRADUATED: each tier priced independently. VOLUME: entire volume at one tier rate."
+        },
+        "tiers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["tier_start", "rate"],
+            "properties": {
+              "tier_start": { "type": "number", "minimum": 0, "description": "Minimum quantity for this tier (inclusive)." },
+              "tier_end": { "type": ["number", "null"], "description": "Maximum quantity for this tier (exclusive). Null for unlimited." },
+              "rate": { "type": "number", "minimum": 0, "description": "Price per unit in this tier." },
+              "flat_fee": { "type": "number", "minimum": 0, "description": "Optional flat fee added when this tier is reached." }
+            }
+          }
+        },
+        "metering_dimension": {
+          "type": "string",
+          "description": "Which usage dimension determines the tier.",
+          "examples": ["api_calls", "gpu_hours", "data_transfer_gb"]
+        }
+      }
+    },
+    "usage_based_config": {
+      "type": "object",
+      "description": "Configuration for USAGE_BASED pricing.",
+      "properties": {
+        "rate_per_unit": { "type": "number", "minimum": 0 },
+        "unit_denomination": { "type": "string", "description": "Value Unit denomination for metering." },
+        "minimum_charge": { "type": "number", "minimum": 0, "description": "Floor charge regardless of usage." },
+        "maximum_charge": { "type": ["number", "null"], "description": "Cap on total charge. Null for unlimited." },
+        "included_units": { "type": "number", "minimum": 0, "description": "Units included in base fee before per-unit charges apply." },
+        "rounding_mode": {
+          "type": "string",
+          "enum": ["UP", "DOWN", "NEAREST", "BANKERS"],
+          "description": "Rounding method for fractional units."
+        }
+      }
+    },
+    "attribute_based_config": {
+      "type": "object",
+      "description": "Configuration for ATTRIBUTE_BASED pricing (multi-dimensional).",
+      "properties": {
+        "pricing_dimensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["dimension_name", "dimension_type"],
+            "properties": {
+              "dimension_name": { "type": "string", "examples": ["gpu_model", "vcores", "ram_gb", "region", "contract_term"] },
+              "dimension_type": { "type": "string", "enum": ["CATEGORICAL", "NUMERIC_RANGE", "BOOLEAN"] },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "value": { "type": ["string", "number", "boolean"] },
+                    "price_modifier": { "type": "number", "description": "Multiplier or adder applied to base price." },
+                    "modifier_type": { "type": "string", "enum": ["MULTIPLY", "ADD", "OVERRIDE"] }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "base_price": { "type": "number", "minimum": 0, "description": "Starting price before attribute modifiers." },
+        "combination_logic": {
+          "type": "string",
+          "enum": ["MULTIPLICATIVE", "ADDITIVE", "MATRIX_LOOKUP"],
+          "description": "How multiple dimension modifiers combine."
+        }
+      }
+    },
+    "outcome_based_config": {
+      "type": "object",
+      "description": "Configuration for OUTCOME_BASED pricing.",
+      "properties": {
+        "outcome_metric": {
+          "type": "string",
+          "description": "What outcome is being measured.",
+          "examples": ["tickets_resolved", "accuracy_improvement_pct", "fraud_prevented_value", "deals_closed"]
+        },
+        "measurement_method": {
+          "type": "string",
+          "enum": ["AUTOMATED", "CUSTOMER_VALIDATED", "THIRD_PARTY_VERIFIED", "AI_SCORED", "HUMAN_VERIFIED"],
+          "description": "How outcomes are validated."
+        },
+        "pricing_model": {
+          "type": "string",
+          "enum": ["PER_OUTCOME", "VALUE_SHARE", "PERFORMANCE_BAND", "TIERED_ACHIEVEMENT"],
+          "description": "How outcome pricing is calculated."
+        },
+        "per_outcome_rate": { "type": "number", "minimum": 0, "description": "Price per measured outcome." },
+        "value_share_percentage": { "type": "number", "minimum": 0, "maximum": 100, "description": "Percentage of value created to charge." },
+        "performance_bands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "band_name": { "type": "string", "examples": ["Bronze", "Silver", "Gold"] },
+              "threshold_min": { "type": "number" },
+              "threshold_max": { "type": ["number", "null"] },
+              "rate": { "type": "number" },
+              "premium_multiplier": { "type": "number", "default": 1.0 }
+            }
+          }
+        },
+        "base_fee": { "type": "number", "minimum": 0, "description": "Optional fixed base fee in addition to outcome charges." },
+        "hybrid_transition": {
+          "type": "object",
+          "description": "Gradual transition from base fee to outcome pricing.",
+          "properties": {
+            "phases": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "phase_name": { "type": "string" },
+                  "start_month": { "type": "integer", "minimum": 1 },
+                  "end_month": { "type": ["integer", "null"] },
+                  "base_fee_weight_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+                  "outcome_weight_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+                }
+              }
+            }
+          }
+        },
+        "validation_config": {
+          "type": "object",
+          "properties": {
+            "validation_window_days": { "type": "integer", "minimum": 1, "description": "Days allowed for outcome validation." },
+            "minimum_confidence_score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Minimum AI confidence for automated validation." },
+            "dispute_resolution_method": { "type": "string", "enum": ["AUTOMATED", "MANUAL_REVIEW", "THIRD_PARTY_ARBITRATION"] }
+          }
+        }
+      }
+    },
+    "dynamic_config": {
+      "type": "object",
+      "description": "Configuration for DYNAMIC pricing (real-time adjustments).",
+      "properties": {
+        "base_price": { "type": "number", "minimum": 0 },
+        "adjustment_factors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "factor_name": { "type": "string", "examples": ["demand_level", "time_of_day", "capacity_utilization", "competitor_price"] },
+              "factor_source": { "type": "string", "enum": ["INTERNAL_METRIC", "EXTERNAL_API", "AI_PREDICTION", "SCHEDULE"] },
+              "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+              "min_multiplier": { "type": "number", "minimum": 0 },
+              "max_multiplier": { "type": "number" }
+            }
+          }
+        },
+        "floor_price": { "type": "number", "minimum": 0 },
+        "ceiling_price": { "type": ["number", "null"] },
+        "update_frequency": { "type": "string", "enum": ["REAL_TIME", "HOURLY", "DAILY", "WEEKLY"] }
+      }
+    },
+    "relationship_config": {
+      "type": "object",
+      "description": "Configuration for RELATIONSHIP-based pricing.",
+      "properties": {
+        "base_price": { "type": "number", "minimum": 0 },
+        "relationship_factors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "factor_name": { "type": "string", "examples": ["tenure_years", "total_revenue", "product_count", "risk_score"] },
+              "modifier_type": { "type": "string", "enum": ["DISCOUNT_PCT", "PRICE_OVERRIDE", "MULTIPLIER"] },
+              "breakpoints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "threshold": { "type": "number" },
+                    "modifier_value": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "bundle_config": {
+      "type": "object",
+      "description": "Configuration for BUNDLE pricing.",
+      "properties": {
+        "bundle_components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["service_id", "pricing_rule_id"],
+            "properties": {
+              "service_id": { "type": "string" },
+              "pricing_rule_id": { "type": "string" },
+              "is_required": { "type": "boolean", "default": true },
+              "standalone_price": { "type": "number" }
+            }
+          }
+        },
+        "bundle_discount_type": { "type": "string", "enum": ["PERCENTAGE", "FIXED_AMOUNT", "LOWEST_FREE", "CUSTOM_FORMULA"] },
+        "bundle_discount_value": { "type": "number" },
+        "minimum_components": { "type": "integer", "minimum": 2 }
+      }
+    },
+    "hybrid_config": {
+      "type": "object",
+      "description": "Configuration for HYBRID pricing (combines multiple models).",
+      "properties": {
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "component_name": { "type": "string", "examples": ["base_subscription", "usage_overage", "outcome_premium"] },
+              "component_type": { "type": "string", "enum": ["FLAT_RATE", "TIERED", "USAGE_BASED", "OUTCOME_BASED", "DYNAMIC"] },
+              "component_config": { "type": "object", "description": "Pricing config matching the component_type." },
+              "weight_pct": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
+      }
+    },
+    "discount_rules": {
+      "type": "array",
+      "description": "Applicable discount rules.",
+      "items": { "$ref": "#/$defs/DiscountRule" }
+    },
+    "approval_requirements": {
+      "type": "object",
+      "description": "Governance approval requirements.",
+      "properties": {
+        "requires_approval": { "type": "boolean" },
+        "approval_levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": { "type": "integer" },
+              "approver_role": { "type": "string" },
+              "condition": { "type": "string", "description": "When this approval level is triggered.", "examples": ["discount > 15%", "revenue_impact > $100K"] }
+            }
+          }
+        }
+      }
+    },
+    "metadata": { "type": "object", "additionalProperties": true },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "created_by": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 }
+  },
+  "$defs": {
+    "DiscountRule": {
+      "type": "object",
+      "properties": {
+        "discount_id": { "type": "string" },
+        "discount_type": { "type": "string", "enum": ["PERCENTAGE", "FIXED_AMOUNT", "VOLUME_REBATE", "LOYALTY_REWARD", "PROMOTIONAL"] },
+        "value": { "type": "number" },
+        "conditions": {
+          "type": "object",
+          "properties": {
+            "min_quantity": { "type": "number" },
+            "min_contract_term_months": { "type": "integer" },
+            "eligible_segments": { "type": "array", "items": { "type": "string" } },
+            "valid_from": { "type": "string", "format": "date-time" },
+            "valid_to": { "type": "string", "format": "date-time" }
+          }
+        },
+        "stackable": { "type": "boolean", "default": false },
+        "priority": { "type": "integer", "minimum": 1 },
+        "max_discount_cap": { "type": "number", "description": "Maximum discount amount regardless of calculation." }
+      }
+    }
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/value-unit.schema.json",
+  "title": "UMP Value Unit",
+  "description": "The atomic representation of exchangeable value in the Universal Monetization Protocol. Value Units are the foundation of all monetization operations.",
+  "type": "object",
+  "required": ["vu_id", "vu_type", "denomination", "precision", "status", "transferability", "created_at"],
+  "properties": {
+    "vu_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this Value Unit type definition.",
+      "examples": ["vu_7f3a9bc2-e1d4-4a5f-b8c7-9d2e1f3a4b5c"]
+    },
+    "vu_type": {
+      "type": "string",
+      "enum": ["FIAT", "CREDIT", "TOKEN", "USAGE_UNIT", "OUTCOME_SCORE", "LOYALTY_POINT", "CARBON_CREDIT", "CUSTOM"],
+      "description": "Category of value representation. FIAT for currencies, CREDIT for internal credits, TOKEN for cryptographic tokens, USAGE_UNIT for consumption-based units, OUTCOME_SCORE for result-based metrics, LOYALTY_POINT for reward programs, CARBON_CREDIT for environmental units, CUSTOM for extension types."
+    },
+    "denomination": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+      "description": "The unit of measurement or currency code. Must be uppercase alphanumeric with underscores.",
+      "examples": ["USD", "EUR", "GPU_HOURS", "API_CALLS", "RESOLVED_TICKETS", "KWH", "CARBON_TONS"]
+    },
+    "precision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18,
+      "description": "Number of decimal places for this value type. 2 for most fiat currencies, 0 for integer units, up to 18 for cryptographic tokens.",
+      "examples": [2, 0, 6, 18]
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable name for display in invoices, portals, and reports.",
+      "examples": ["US Dollar", "GPU Compute Hours", "Resolved Support Tickets"]
+    },
+    "display_symbol": {
+      "type": "string",
+      "maxLength": 8,
+      "description": "Symbol used for display (e.g., $, EUR, hrs).",
+      "examples": ["$", "hrs", "pts"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["DRAFT", "ACTIVE", "DEPRECATED", "RETIRED"],
+      "description": "Lifecycle status of this Value Unit type."
+    },
+    "transferability": {
+      "type": "string",
+      "enum": ["TRANSFERABLE", "NON_TRANSFERABLE", "CONDITIONAL"],
+      "description": "Whether this VU can be transferred between entities."
+    },
+    "convertibility": {
+      "type": "object",
+      "description": "Rules for converting this VU to/from other VU types.",
+      "properties": {
+        "is_convertible": {
+          "type": "boolean",
+          "description": "Whether conversion is supported."
+        },
+        "conversion_rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConversionRule"
+          }
+        }
+      }
+    },
+    "expiry_policy": {
+      "type": "object",
+      "description": "Time-based validity rules for VU balances.",
+      "properties": {
+        "has_expiry": {
+          "type": "boolean"
+        },
+        "expires_after_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of days after issuance before expiry."
+        },
+        "grace_period_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Grace period after expiry during which VUs can still be used."
+        },
+        "expiry_action": {
+          "type": "string",
+          "enum": ["FORFEIT", "CONVERT", "ROLLOVER", "NOTIFY_ONLY"],
+          "description": "Action taken when VUs expire."
+        }
+      }
+    },
+    "metering_config": {
+      "type": "object",
+      "description": "Configuration for how this VU is metered when used as a consumption unit.",
+      "properties": {
+        "aggregation_method": {
+          "type": "string",
+          "enum": ["SUM", "MAX", "AVERAGE", "COUNT", "LAST", "PERCENTILE_95"],
+          "description": "How usage events are aggregated for billing."
+        },
+        "aggregation_interval": {
+          "type": "string",
+          "enum": ["REAL_TIME", "HOURLY", "DAILY", "WEEKLY", "MONTHLY", "BILLING_PERIOD"],
+          "description": "Time window for aggregation."
+        },
+        "minimum_billable_unit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Minimum unit of consumption that triggers billing."
+        }
+      }
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Compliance and regulatory attributes.",
+      "properties": {
+        "tax_category": {
+          "type": "string",
+          "description": "Tax classification for this value type.",
+          "examples": ["DIGITAL_SERVICE", "PHYSICAL_GOOD", "FINANCIAL_INSTRUMENT", "EXEMPT"]
+        },
+        "gl_code": {
+          "type": "string",
+          "description": "General Ledger account code for revenue recognition.",
+          "examples": ["4100", "4200", "4310"]
+        },
+        "revenue_recognition_rule": {
+          "type": "string",
+          "enum": ["POINT_IN_TIME", "OVER_TIME", "MILESTONE", "OUTCOME"],
+          "description": "ASC 606 / IFRS 15 revenue recognition method."
+        },
+        "data_classification": {
+          "type": "string",
+          "enum": ["PUBLIC", "INTERNAL", "CONFIDENTIAL", "RESTRICTED"],
+          "description": "Data sensitivity classification."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible key-value pairs for domain-specific attributes."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of creation."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Entity ID of the creator."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version for this VU definition."
+    }
+  },
+  "$defs": {
+    "ConversionRule": {
+      "type": "object",
+      "required": ["target_denomination", "rate", "rate_type"],
+      "properties": {
+        "target_denomination": {
+          "type": "string",
+          "description": "The denomination to convert to."
+        },
+        "rate": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Conversion rate (1 source = rate * target)."
+        },
+        "rate_type": {
+          "type": "string",
+          "enum": ["FIXED", "DYNAMIC", "MARKET"],
+          "description": "Whether rate is fixed, dynamically calculated, or market-driven."
+        },
+        "rate_provider": {
+          "type": "string",
+          "description": "Source of the exchange rate.",
+          "examples": ["ECB", "INTERNAL", "COINBASE", "CUSTOM_API"]
+        },
+        "effective_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effective_to": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

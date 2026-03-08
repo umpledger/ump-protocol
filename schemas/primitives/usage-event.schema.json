@@ -1,0 +1,348 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/usage-event.schema.json",
+  "title": "UMP Usage Event",
+  "description": "Captures consumption of services for billing and analytics. Usage events are the primary input to consumption-based and outcome-based pricing calculations. Supports multi-dimensional metering and comprehensive validation.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "entity_id",
+    "service_id",
+    "timestamp",
+    "quantity",
+    "unit"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier. Used for idempotency and deduplication.",
+      "examples": [
+        "evt_c3e8f1a2-b4d6-4c9f-a2e1-3f5b7c9d1e2a"
+      ]
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the entity (customer, account, or consumer) using the service."
+    },
+    "service_id": {
+      "type": "string",
+      "description": "ID of the service being consumed."
+    },
+    "contract_id": {
+      "type": "string",
+      "description": "Associated contract governing billing for this usage."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when usage occurred."
+    },
+    "quantity": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Amount of service consumed."
+    },
+    "unit": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+      "description": "Unit of measurement denominating the quantity. References a Value Unit definition.",
+      "examples": [
+        "API_CALLS",
+        "GPU_HOURS",
+        "GB_TRANSFERRED",
+        "USER_SEATS",
+        "TRANSACTIONS"
+      ]
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Multi-dimensional metering attributes for granular pricing and analytics.",
+      "properties": {
+        "region": {
+          "type": "string",
+          "description": "Geographic region of usage.",
+          "examples": [
+            "us-east-1",
+            "eu-west-1",
+            "ap-southeast-1"
+          ]
+        },
+        "tier": {
+          "type": "string",
+          "description": "Service tier or level.",
+          "examples": [
+            "free",
+            "standard",
+            "premium",
+            "enterprise"
+          ]
+        },
+        "quality_level": {
+          "type": "string",
+          "description": "Quality or priority level of usage.",
+          "examples": [
+            "basic",
+            "standard",
+            "high",
+            "ultra"
+          ]
+        },
+        "gpu_model": {
+          "type": "string",
+          "description": "GPU or hardware model used.",
+          "examples": [
+            "H100",
+            "A100",
+            "V100"
+          ]
+        },
+        "user_type": {
+          "type": "string",
+          "description": "Classification of user.",
+          "examples": [
+            "trial",
+            "paid",
+            "enterprise"
+          ]
+        },
+        "resource_type": {
+          "type": "string",
+          "description": "Type of resource consumed.",
+          "examples": [
+            "compute",
+            "storage",
+            "bandwidth",
+            "api"
+          ]
+        },
+        "custom_dimension_1": {
+          "description": "Custom dimension for domain-specific metering."
+        },
+        "custom_dimension_2": {
+          "description": "Custom dimension for domain-specific metering."
+        }
+      }
+    },
+    "event_source": {
+      "type": "string",
+      "enum": [
+        "API_PUSH",
+        "FILE_INGESTION",
+        "IOT_STREAM",
+        "AGENT_REPORTED",
+        "WEBHOOK",
+        "DATABASE_QUERY",
+        "MANUAL_ENTRY"
+      ],
+      "description": "How the usage event was captured. API_PUSH: via REST/GRPC. FILE_INGESTION: batch upload. IOT_STREAM: sensor/device data. AGENT_REPORTED: software agent reporting. WEBHOOK: external system callback. DATABASE_QUERY: derived from log analysis. MANUAL_ENTRY: human input."
+    },
+    "source_system": {
+      "type": "string",
+      "description": "Identifier of the system originating this event.",
+      "examples": [
+        "api-gateway",
+        "cloud-platform",
+        "edge-device",
+        "third-party-integration"
+      ]
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "ID linking related events together for tracing and debugging."
+    },
+    "processing_status": {
+      "type": "string",
+      "enum": [
+        "RECEIVED",
+        "VALIDATED",
+        "RATED",
+        "BILLED",
+        "REJECTED",
+        "PENDING_VALIDATION"
+      ],
+      "description": "Current processing stage. RECEIVED: ingested. VALIDATED: passed checks. RATED: pricing applied. BILLED: included in invoice. REJECTED: failed validation. PENDING_VALIDATION: awaiting review."
+    },
+    "validation_results": {
+      "type": "object",
+      "description": "Results from data validation and processing.",
+      "properties": {
+        "is_valid": {
+          "type": "boolean"
+        },
+        "validation_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "validation_rules_evaluated": {
+          "type": "array",
+          "description": "Rules checked during validation.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "rule_id": {
+                "type": "string"
+              },
+              "rule_name": {
+                "type": "string"
+              },
+              "passed": {
+                "type": "boolean"
+              },
+              "error_message": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "validation_errors": {
+          "type": "array",
+          "description": "Validation failures or warnings.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "error_code": {
+                "type": "string"
+              },
+              "error_message": {
+                "type": "string"
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "ERROR",
+                  "WARNING",
+                  "INFO"
+                ]
+              },
+              "field": {
+                "type": "string",
+                "description": "Field causing the error."
+              }
+            }
+          }
+        },
+        "anomaly_detection_results": {
+          "type": "object",
+          "description": "AI-based anomaly detection.",
+          "properties": {
+            "is_anomalous": {
+              "type": "boolean"
+            },
+            "anomaly_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Confidence that event is anomalous (0=normal, 1=certain anomaly)."
+            },
+            "anomaly_reason": {
+              "type": "string",
+              "examples": [
+                "usage_spike",
+                "unusual_dimension_combination",
+                "out_of_typical_time_range"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "rating_results": {
+      "type": "object",
+      "description": "Pricing and rating calculations applied.",
+      "properties": {
+        "rated_amount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Computed charge for this event."
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "pricing_rule_id": {
+          "type": "string",
+          "description": "Rule used for rating."
+        },
+        "unit_rate": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Rate per unit applied."
+        },
+        "rating_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "billing_period": {
+      "type": "object",
+      "description": "Billing cycle this event belongs to.",
+      "properties": {
+        "period_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "period_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "invoice_id": {
+          "type": "string",
+          "description": "Invoice this event was billed on."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible attributes and domain-specific data."
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when event was received by the system."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version for this event."
+    }
+  },
+  "examples": [
+    {
+      "event_id": "evt_c3e8f1a2-b4d6-4c9f-a2e1-3f5b7c9d1e2a",
+      "entity_id": "cust_12345",
+      "service_id": "svc_gpu_compute",
+      "contract_id": "ct_a7f4c9e2-d2f5",
+      "timestamp": "2025-02-19T14:30:00Z",
+      "quantity": 2.5,
+      "unit": "GPU_HOURS",
+      "dimensions": {
+        "region": "us-east-1",
+        "gpu_model": "H100",
+        "quality_level": "high"
+      },
+      "event_source": "API_PUSH",
+      "source_system": "cloud-platform",
+      "processing_status": "BILLED",
+      "validation_results": {
+        "is_valid": true,
+        "validation_timestamp": "2025-02-19T14:30:05Z",
+        "anomaly_detection_results": {
+          "is_anomalous": false,
+          "anomaly_score": 0.15
+        }
+      },
+      "rating_results": {
+        "rated_amount": 125.00,
+        "currency": "USD",
+        "pricing_rule_id": "pr_gpu_tiered",
+        "unit_rate": 50.0
+      },
+      "received_at": "2025-02-19T14:30:00Z"
+    }
+  ]
+}

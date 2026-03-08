@@ -1,0 +1,685 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/policy.schema.json",
+  "title": "UMP Governance Policy",
+  "description": "Defines rules, constraints, and enforcement mechanisms for monetization operations. Policies govern pricing, billing, settlement, compliance, and data privacy to ensure consistency and regulatory adherence.",
+  "type": "object",
+  "required": [
+    "policy_id",
+    "policy_type",
+    "status",
+    "rules",
+    "created_at"
+  ],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this policy."
+    },
+    "policy_name": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Human-readable policy name."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2048,
+      "description": "Detailed policy purpose and scope."
+    },
+    "policy_type": {
+      "type": "string",
+      "enum": [
+        "PRICING",
+        "BILLING",
+        "SETTLEMENT",
+        "COMPLIANCE",
+        "DATA_PRIVACY",
+        "PAYMENT",
+        "USAGE_LIMITS",
+        "FRAUD_PREVENTION",
+        "CUSTOM"
+      ],
+      "description": "Category of policy. Determines applicable rules and enforcement context."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "PENDING_APPROVAL",
+        "ACTIVE",
+        "SUSPENDED",
+        "ARCHIVED",
+        "DEPRECATED"
+      ],
+      "description": "Policy lifecycle status."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Policy version number."
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When this policy version becomes effective."
+    },
+    "effective_to": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "When this policy expires. Null for indefinite."
+    },
+    "scope": {
+      "type": "object",
+      "description": "Which entities and services this policy applies to.",
+      "properties": {
+        "applies_to_entities": {
+          "type": "array",
+          "description": "Specific entity IDs or entity type selectors.",
+          "items": {
+            "type": "string",
+            "examples": [
+              "entity_12345",
+              "ENTITY_TYPE:BUYER",
+              "ENTITY_TYPE:SELLER",
+              "*"
+            ]
+          }
+        },
+        "applies_to_services": {
+          "type": "array",
+          "description": "Specific service IDs or service type selectors.",
+          "items": {
+            "type": "string",
+            "examples": [
+              "svc_compute",
+              "SERVICE_TYPE:API",
+              "*"
+            ]
+          }
+        },
+        "applies_to_regions": {
+          "type": "array",
+          "description": "Geographic regions where policy applies.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "applies_to_contract_types": {
+          "type": "array",
+          "description": "Contract types affected.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "SUBSCRIPTION",
+              "USAGE",
+              "OUTCOME",
+              "HYBRID",
+              "FRAMEWORK"
+            ]
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Policy rules to be enforced.",
+      "items": {
+        "$ref": "#/$defs/PolicyRule"
+      }
+    },
+    "enforcement_mode": {
+      "type": "string",
+      "enum": [
+        "ENFORCE",
+        "WARN",
+        "AUDIT_ONLY",
+        "DRY_RUN"
+      ],
+      "description": "How strictly policy is enforced. ENFORCE: block violations. WARN: allow with alert. AUDIT_ONLY: log but don't block. DRY_RUN: test mode."
+    },
+    "approval_gates": {
+      "type": "object",
+      "description": "Approval requirements for policy-affected operations.",
+      "properties": {
+        "requires_approval": {
+          "type": "boolean"
+        },
+        "approval_threshold": {
+          "type": "string",
+          "description": "Condition triggering approval requirement.",
+          "examples": [
+            "discount > 20%",
+            "amount > 100000",
+            "contract_type == OUTCOME"
+          ]
+        },
+        "approval_levels": {
+          "type": "array",
+          "description": "Sequential approval chain.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "approver_role": {
+                "type": "string",
+                "examples": [
+                  "MANAGER",
+                  "DIRECTOR",
+                  "VP",
+                  "CFO",
+                  "LEGAL"
+                ]
+              },
+              "approver_count": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Number of approvers required at this level."
+              },
+              "time_limit_hours": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Hours to approve before escalation."
+              }
+            }
+          }
+        },
+        "auto_escalation": {
+          "type": "boolean",
+          "description": "Auto-escalate if approval deadline missed."
+        }
+      }
+    },
+    "violation_handling": {
+      "type": "object",
+      "description": "Actions taken when policy violations occur.",
+      "properties": {
+        "violation_detection": {
+          "type": "string",
+          "enum": [
+            "REAL_TIME",
+            "BATCH",
+            "HYBRID"
+          ]
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action_type": {
+                "type": "string",
+                "enum": [
+                  "BLOCK",
+                  "ALERT",
+                  "LOG",
+                  "ESCALATE",
+                  "AUTO_REMEDIATE",
+                  "QUARANTINE"
+                ]
+              },
+              "target_roles": {
+                "type": "array",
+                "description": "Who receives alerts.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "CRITICAL",
+                  "HIGH",
+                  "MEDIUM",
+                  "LOW",
+                  "INFO"
+                ]
+              },
+              "remediation_steps": {
+                "type": "array",
+                "description": "Auto-remediation actions.",
+                "items": {
+                  "type": "string",
+                  "examples": [
+                    "revert_transaction",
+                    "apply_default_pricing",
+                    "suspend_service",
+                    "create_manual_review_task"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "investigation_required": {
+          "type": "boolean",
+          "description": "Whether violations require investigation."
+        }
+      }
+    },
+    "pricing_controls": {
+      "type": "object",
+      "description": "Pricing-specific policy controls.",
+      "properties": {
+        "discount_limits": {
+          "type": "object",
+          "properties": {
+            "max_discount_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "max_discount_amount": {
+              "type": "number",
+              "minimum": 0
+            },
+            "discount_requires_approval": {
+              "type": "boolean"
+            }
+          }
+        },
+        "price_change_controls": {
+          "type": "object",
+          "properties": {
+            "max_increase_pct": {
+              "type": "number"
+            },
+            "max_increase_amount": {
+              "type": "number"
+            },
+            "price_change_notice_days": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "minimum_pricing": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Floor price constraint."
+        },
+        "maximum_pricing": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "description": "Ceiling price constraint."
+        }
+      }
+    },
+    "billing_controls": {
+      "type": "object",
+      "description": "Billing-specific policy controls.",
+      "properties": {
+        "billing_frequency_allowed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ONE_TIME",
+              "WEEKLY",
+              "MONTHLY",
+              "QUARTERLY",
+              "ANNUAL"
+            ]
+          }
+        },
+        "payment_terms_min_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum days allowed for payment."
+        },
+        "payment_terms_max_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum days allowed for payment."
+        },
+        "late_payment_interest_max": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "invoice_retention_days": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "settlement_controls": {
+      "type": "object",
+      "description": "Settlement-specific policy controls.",
+      "properties": {
+        "allowed_allocation_methods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "BILATERAL",
+              "WATERFALL",
+              "PROPORTIONAL",
+              "PERFORMANCE_BASED",
+              "ESCROW"
+            ]
+          }
+        },
+        "settlement_frequency": {
+          "type": "string",
+          "enum": [
+            "WEEKLY",
+            "BIWEEKLY",
+            "MONTHLY",
+            "QUARTERLY",
+            "ANNUAL",
+            "ON_DEMAND"
+          ]
+        },
+        "max_settlement_variance_pct": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum acceptable variance in reconciliation."
+        },
+        "hold_back_percentage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Percentage of settlement held back for disputes/adjustments."
+        }
+      }
+    },
+    "compliance_controls": {
+      "type": "object",
+      "description": "Compliance-specific policy controls.",
+      "properties": {
+        "required_certifications": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GDPR",
+              "CCPA",
+              "HIPAA",
+              "PCI_DSS",
+              "SOC2",
+              "ISO27001"
+            ]
+          }
+        },
+        "data_retention_days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "audit_frequency": {
+          "type": "string",
+          "enum": [
+            "REAL_TIME",
+            "DAILY",
+            "WEEKLY",
+            "MONTHLY",
+            "QUARTERLY",
+            "ANNUAL"
+          ]
+        },
+        "audit_trail_retention_years": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "data_privacy_controls": {
+      "type": "object",
+      "description": "Data privacy policy controls.",
+      "properties": {
+        "pii_encryption_required": {
+          "type": "boolean"
+        },
+        "payment_data_protection": {
+          "type": "string",
+          "enum": [
+            "PCI_DSS_LEVEL_1",
+            "PCI_DSS_LEVEL_2",
+            "PCI_DSS_LEVEL_3",
+            "PCI_DSS_LEVEL_4",
+            "NONE"
+          ]
+        },
+        "data_minimization": {
+          "type": "boolean",
+          "description": "Collect only necessary data."
+        },
+        "consent_required": {
+          "type": "boolean"
+        },
+        "data_sharing_restrictions": {
+          "type": "array",
+          "description": "Who data can be shared with.",
+          "items": {
+            "type": "string",
+            "examples": [
+              "INTERNAL_ONLY",
+              "VENDORS_ONLY",
+              "NO_THIRD_PARTY_SHARING"
+            ]
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Policy monitoring and reporting.",
+      "properties": {
+        "monitoring_enabled": {
+          "type": "boolean"
+        },
+        "metrics_tracked": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "examples": [
+              "violation_count",
+              "compliance_rate",
+              "approval_time",
+              "discrepancy_amount"
+            ]
+          }
+        },
+        "reporting_frequency": {
+          "type": "string",
+          "enum": [
+            "REAL_TIME",
+            "DAILY",
+            "WEEKLY",
+            "MONTHLY"
+          ]
+        },
+        "alert_recipients": {
+          "type": "array",
+          "description": "Roles/entities receiving alerts.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible domain-specific attributes."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_by": {
+      "type": "string"
+    },
+    "last_reviewed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_reviewed_by": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "PolicyRule": {
+      "type": "object",
+      "required": [
+        "rule_id",
+        "rule_name",
+        "conditions",
+        "actions"
+      ],
+      "description": "Individual policy enforcement rule.",
+      "properties": {
+        "rule_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "rule_name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "description": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Conditions that must be satisfied to trigger rule.",
+          "items": {
+            "type": "object",
+            "required": [
+              "field",
+              "operator",
+              "value"
+            ],
+            "properties": {
+              "field": {
+                "type": "string",
+                "examples": [
+                  "discount_percentage",
+                  "contract_value",
+                  "service_type",
+                  "entity_status",
+                  "pricing_rule_type"
+                ]
+              },
+              "operator": {
+                "type": "string",
+                "enum": [
+                  "EQUALS",
+                  "NOT_EQUALS",
+                  "GREATER_THAN",
+                  "GREATER_THAN_OR_EQUAL",
+                  "LESS_THAN",
+                  "LESS_THAN_OR_EQUAL",
+                  "IN",
+                  "NOT_IN",
+                  "CONTAINS",
+                  "NOT_CONTAINS",
+                  "MATCHES_REGEX"
+                ]
+              },
+              "value": {
+                "description": "Value to compare against."
+              },
+              "logical_operator": {
+                "type": "string",
+                "enum": [
+                  "AND",
+                  "OR"
+                ],
+                "default": "AND"
+              }
+            }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Actions triggered when conditions met.",
+          "items": {
+            "type": "object",
+            "required": [
+              "action_type"
+            ],
+            "properties": {
+              "action_type": {
+                "type": "string",
+                "enum": [
+                  "REQUIRE_APPROVAL",
+                  "APPLY_ADJUSTMENT",
+                  "BLOCK",
+                  "ALERT",
+                  "LOG",
+                  "ESCALATE",
+                  "AUTO_REMEDIATE",
+                  "CUSTOM_WEBHOOK"
+                ]
+              },
+              "action_parameters": {
+                "type": "object",
+                "description": "Parameters specific to action type.",
+                "additionalProperties": true
+              },
+              "severity": {
+                "type": "string",
+                "enum": [
+                  "CRITICAL",
+                  "HIGH",
+                  "MEDIUM",
+                  "LOW",
+                  "INFO"
+                ]
+              }
+            }
+          }
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rule evaluation order (lower = earlier)."
+        },
+        "exceptions": {
+          "type": "array",
+          "description": "Entities or conditions exempted from this rule.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "exception_id": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "entity_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "valid_from": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "valid_to": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

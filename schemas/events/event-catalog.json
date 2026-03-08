@@ -1,0 +1,2047 @@
+{
+  "catalog_metadata": {
+    "version": "1.0.0",
+    "description": "Universal Monetization Protocol (UMP) Event Catalog - Comprehensive event definitions for all protocol layers",
+    "last_updated": "2024-01-15T00:00:00Z",
+    "total_events": 48,
+    "layers_covered": ["L1", "L2", "L3", "L4", "L5", "L6", "L7"]
+  },
+  "events": [
+    {
+      "event_type": "ump.value_unit.created",
+      "description": "A new value unit has been created in the system",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "POST /value-units",
+      "typical_consumers": ["catalog_service", "pricing_engine", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["vu_id", "name", "type", "timestamp"],
+        "properties": {
+          "vu_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier of the value unit"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the value unit"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["CONSUMABLE", "RECURRING", "TIME_BASED", "TIERED", "HYBRID"],
+            "description": "Type of value unit"
+          },
+          "unit_of_measure": {
+            "type": "string",
+            "description": "Unit of measurement"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Entity ID of creator"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.value_unit.updated",
+      "description": "A value unit has been updated",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "PUT /value-units/{vu_id}",
+      "typical_consumers": ["catalog_service", "pricing_engine", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["vu_id", "timestamp"],
+        "properties": {
+          "vu_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "changes": {
+            "type": "object",
+            "description": "Changed fields and their new values"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.value_unit.deprecated",
+      "description": "A value unit has been marked as deprecated",
+      "layer": "L1",
+      "severity": "WARNING",
+      "triggered_by": "DELETE /value-units/{vu_id}",
+      "typical_consumers": ["catalog_service", "pricing_engine", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["vu_id", "timestamp"],
+        "properties": {
+          "vu_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deprecation_reason": {
+            "type": "string"
+          },
+          "replacement_vu_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of replacement value unit if applicable"
+          },
+          "deprecated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.entity.created",
+      "description": "A new entity (provider, consumer, intermediary) has been created",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "POST /entities",
+      "typical_consumers": ["entity_service", "contract_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["entity_id", "name", "entity_type", "role", "timestamp"],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": ["INDIVIDUAL", "ORGANIZATION", "SERVICE_PROVIDER"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["PROVIDER", "CONSUMER", "INTERMEDIARY"]
+          },
+          "contact_info": {
+            "type": "object"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.entity.updated",
+      "description": "An entity's information has been updated",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "PUT /entities/{entity_id}",
+      "typical_consumers": ["entity_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["entity_id", "timestamp"],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "changes": {
+            "type": "object"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.entity.status_changed",
+      "description": "An entity's status has changed (e.g., ACTIVE to SUSPENDED)",
+      "layer": "L1",
+      "severity": "WARNING",
+      "triggered_by": "PATCH /entities/{entity_id}",
+      "typical_consumers": ["entity_service", "contract_service", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["entity_id", "previous_status", "new_status", "timestamp"],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previous_status": {
+            "type": "string",
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"]
+          },
+          "new_status": {
+            "type": "string",
+            "enum": ["ACTIVE", "INACTIVE", "SUSPENDED"]
+          },
+          "status_change_reason": {
+            "type": "string"
+          },
+          "changed_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.contract.created",
+      "description": "A new contract has been created",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "POST /contracts",
+      "typical_consumers": ["contract_service", "billing_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["contract_id", "provider_id", "consumer_id", "timestamp"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "terms": {
+            "type": "object"
+          },
+          "initial_status": {
+            "type": "string",
+            "enum": ["DRAFT", "PENDING_SIGNATURE"]
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.contract.signed",
+      "description": "A contract has been signed and activated",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "PATCH /contracts/{contract_id}",
+      "typical_consumers": ["contract_service", "billing_service", "metering_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["contract_id", "timestamp"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "signed_by_provider": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signed_by_consumer": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.contract.amended",
+      "description": "A contract has been amended",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "POST /contracts/{contract_id}/amendments",
+      "typical_consumers": ["contract_service", "billing_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["contract_id", "amendment_id", "timestamp"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amendment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "changes": {
+            "type": "object",
+            "description": "Changes made in the amendment"
+          },
+          "amended_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "amendment_reason": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.contract.renewed",
+      "description": "A contract has been renewed",
+      "layer": "L1",
+      "severity": "INFO",
+      "triggered_by": "Automatic renewal or manual renewal action",
+      "typical_consumers": ["contract_service", "billing_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["contract_id", "timestamp"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "renewal_period": {
+            "type": "object",
+            "properties": {
+              "start_date": {
+                "type": "string",
+                "format": "date"
+              },
+              "end_date": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          },
+          "renewal_method": {
+            "type": "string",
+            "enum": ["AUTO_RENEWAL", "MANUAL_RENEWAL"]
+          },
+          "new_terms": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.contract.terminated",
+      "description": "A contract has been terminated",
+      "layer": "L1",
+      "severity": "WARNING",
+      "triggered_by": "PATCH /contracts/{contract_id}",
+      "typical_consumers": ["contract_service", "billing_service", "metering_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["contract_id", "timestamp"],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "termination_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "termination_reason": {
+            "type": "string"
+          },
+          "initiated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "final_settlement_required": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.pricing_rule.created",
+      "description": "A new pricing rule has been created",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "POST /pricing-rules",
+      "typical_consumers": ["pricing_engine", "offer_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["rule_id", "name", "rule_type", "timestamp"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rule_type": {
+            "type": "string",
+            "enum": ["TIERED", "VOLUME_BASED", "TIME_BASED", "DYNAMIC", "FIXED"]
+          },
+          "conditions": {
+            "type": "object"
+          },
+          "pricing_model": {
+            "type": "object"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.pricing_rule.activated",
+      "description": "A pricing rule has been activated",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "PUT /pricing-rules/{rule_id}",
+      "typical_consumers": ["pricing_engine", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["rule_id", "timestamp"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "activated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.pricing_rule.suspended",
+      "description": "A pricing rule has been suspended",
+      "layer": "L2",
+      "severity": "WARNING",
+      "triggered_by": "PATCH /pricing-rules/{rule_id}",
+      "typical_consumers": ["pricing_engine", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["rule_id", "timestamp"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "suspension_reason": {
+            "type": "string"
+          },
+          "suspended_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resume_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Optional scheduled resume date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.pricing_rule.deprecated",
+      "description": "A pricing rule has been deprecated",
+      "layer": "L2",
+      "severity": "WARNING",
+      "triggered_by": "DELETE /pricing-rules/{rule_id}",
+      "typical_consumers": ["pricing_engine", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["rule_id", "timestamp"],
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deprecation_reason": {
+            "type": "string"
+          },
+          "replacement_rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "deprecated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.offer.published",
+      "description": "An offer has been published",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "PATCH /offers/{offer_id}",
+      "typical_consumers": ["offer_service", "catalog_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["offer_id", "timestamp"],
+        "properties": {
+          "offer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pricing_rules": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "validity_period": {
+            "type": "object"
+          },
+          "published_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "publication_channels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.offer.withdrawn",
+      "description": "An offer has been withdrawn from availability",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "PATCH /offers/{offer_id}",
+      "typical_consumers": ["offer_service", "catalog_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["offer_id", "timestamp"],
+        "properties": {
+          "offer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "withdrawal_reason": {
+            "type": "string"
+          },
+          "withdrawn_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "effective_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "affected_contracts": {
+            "type": "integer",
+            "description": "Number of contracts affected by withdrawal"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.catalog.updated",
+      "description": "The service catalog has been updated",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "POST /offers or PUT /offers",
+      "typical_consumers": ["catalog_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["catalog_id", "timestamp"],
+        "properties": {
+          "catalog_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items_added": {
+            "type": "integer"
+          },
+          "items_updated": {
+            "type": "integer"
+          },
+          "items_removed": {
+            "type": "integer"
+          },
+          "update_type": {
+            "type": "string",
+            "enum": ["FULL_REFRESH", "INCREMENTAL"]
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.quote.created",
+      "description": "A new quote has been created",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "POST /quotes",
+      "typical_consumers": ["quote_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["quote_id", "consumer_id", "timestamp"],
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "total_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.quote.approved",
+      "description": "A quote has been approved and converted to contract",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "PATCH /quotes/{quote_id}",
+      "typical_consumers": ["quote_service", "contract_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["quote_id", "timestamp"],
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resulting_contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approval_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.quote.expired",
+      "description": "A quote has expired without approval",
+      "layer": "L2",
+      "severity": "INFO",
+      "triggered_by": "Automatic expiration",
+      "typical_consumers": ["quote_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["quote_id", "timestamp"],
+        "properties": {
+          "quote_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiration_date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "estimated_value": {
+            "type": "number",
+            "format": "double"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.usage_event.received",
+      "description": "A usage event has been received by the metering system",
+      "layer": "L3",
+      "severity": "INFO",
+      "triggered_by": "POST /usage-events",
+      "typical_consumers": ["metering_service", "validation_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["event_id", "contract_id", "timestamp"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "meter_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "source_system": {
+            "type": "string"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.usage_event.validated",
+      "description": "A usage event has passed validation checks",
+      "layer": "L3",
+      "severity": "INFO",
+      "triggered_by": "Validation process",
+      "typical_consumers": ["validation_service", "rating_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["event_id", "timestamp"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "validation_rules_applied": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validation_passed": {
+            "type": "boolean"
+          },
+          "validation_warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.usage_event.rated",
+      "description": "A usage event has been rated according to pricing rules",
+      "layer": "L3",
+      "severity": "INFO",
+      "triggered_by": "Rating process",
+      "typical_consumers": ["rating_service", "billing_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["event_id", "timestamp"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applied_rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rated_quantity": {
+            "type": "number"
+          },
+          "unit_price": {
+            "type": "number",
+            "format": "double"
+          },
+          "calculated_charge": {
+            "type": "number",
+            "format": "double"
+          },
+          "rating_details": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.usage_event.rejected",
+      "description": "A usage event has been rejected",
+      "layer": "L3",
+      "severity": "WARNING",
+      "triggered_by": "Validation or rating process",
+      "typical_consumers": ["validation_service", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["event_id", "rejection_reason", "timestamp"],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rejection_reason": {
+            "type": "string",
+            "enum": ["INVALID_CONTRACT", "INVALID_QUANTITY", "DUPLICATE_EVENT", "OUT_OF_RANGE", "VALIDATION_FAILED"]
+          },
+          "rejection_details": {
+            "type": "object"
+          },
+          "can_be_retried": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.meter.threshold_reached",
+      "description": "A meter has reached a configured threshold",
+      "layer": "L3",
+      "severity": "WARNING",
+      "triggered_by": "Meter reading evaluation",
+      "typical_consumers": ["metering_service", "alert_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["meter_id", "timestamp"],
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "current_value": {
+            "type": "number"
+          },
+          "threshold_value": {
+            "type": "number"
+          },
+          "threshold_percentage": {
+            "type": "number",
+            "format": "float",
+            "description": "Percentage of threshold reached"
+          },
+          "actions_triggered": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.meter.reset",
+      "description": "A meter has been reset",
+      "layer": "L3",
+      "severity": "INFO",
+      "triggered_by": "Manual reset or billing period reset",
+      "typical_consumers": ["metering_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["meter_id", "timestamp"],
+        "properties": {
+          "meter_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previous_value": {
+            "type": "number"
+          },
+          "new_value": {
+            "type": "number"
+          },
+          "reset_reason": {
+            "type": "string",
+            "enum": ["BILLING_PERIOD_END", "MANUAL_RESET", "MAINTENANCE"]
+          },
+          "reset_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.invoice.generated",
+      "description": "An invoice has been generated",
+      "layer": "L4",
+      "severity": "INFO",
+      "triggered_by": "POST /invoices/generate",
+      "typical_consumers": ["invoice_service", "billing_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["invoice_id", "contract_id", "timestamp"],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "billing_period": {
+            "type": "object"
+          },
+          "subtotal": {
+            "type": "number",
+            "format": "double"
+          },
+          "tax_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "format": "double"
+          },
+          "line_items": {
+            "type": "integer",
+            "description": "Number of line items"
+          },
+          "generated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.invoice.sent",
+      "description": "An invoice has been sent to the consumer",
+      "layer": "L4",
+      "severity": "INFO",
+      "triggered_by": "PATCH /invoices/{invoice_id}",
+      "typical_consumers": ["invoice_service", "notification_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["invoice_id", "timestamp"],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sent_to": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_type": {
+                  "type": "string",
+                  "enum": ["EMAIL", "PORTAL", "API"]
+                },
+                "contact_value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "sent_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.invoice.paid",
+      "description": "An invoice has been fully paid",
+      "layer": "L4",
+      "severity": "INFO",
+      "triggered_by": "POST /payments",
+      "typical_consumers": ["invoice_service", "payment_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["invoice_id", "timestamp"],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "total_paid": {
+            "type": "number",
+            "format": "double"
+          },
+          "payment_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "payment_methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "paid_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.invoice.overdue",
+      "description": "An invoice has become overdue",
+      "layer": "L4",
+      "severity": "CRITICAL",
+      "triggered_by": "Automatic overdue check",
+      "typical_consumers": ["invoice_service", "collection_service", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["invoice_id", "timestamp"],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "consumer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "days_overdue": {
+            "type": "integer"
+          },
+          "amount_outstanding": {
+            "type": "number",
+            "format": "double"
+          },
+          "escalation_level": {
+            "type": "integer",
+            "description": "Current escalation level (1-3)"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.invoice.voided",
+      "description": "An invoice has been voided",
+      "layer": "L4",
+      "severity": "WARNING",
+      "triggered_by": "PATCH /invoices/{invoice_id}",
+      "typical_consumers": ["invoice_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["invoice_id", "timestamp"],
+        "properties": {
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_number": {
+            "type": "string"
+          },
+          "void_reason": {
+            "type": "string"
+          },
+          "replacement_invoice_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of replacement invoice if issued"
+          },
+          "voided_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.payment.received",
+      "description": "A payment has been received",
+      "layer": "L4",
+      "severity": "INFO",
+      "triggered_by": "POST /payments",
+      "typical_consumers": ["payment_service", "invoice_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["payment_id", "timestamp"],
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": ["CREDIT_CARD", "BANK_TRANSFER", "CHECK", "WIRE", "OTHER"]
+          },
+          "reference_number": {
+            "type": "string"
+          },
+          "payment_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "payer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.payment.allocated",
+      "description": "A payment has been allocated to invoices",
+      "layer": "L4",
+      "severity": "INFO",
+      "triggered_by": "Payment allocation process",
+      "typical_consumers": ["payment_service", "invoice_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["payment_id", "timestamp"],
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoice_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "allocated_amount": {
+                  "type": "number",
+                  "format": "double"
+                }
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.payment.reversed",
+      "description": "A payment has been reversed",
+      "layer": "L4",
+      "severity": "WARNING",
+      "triggered_by": "Manual reversal or chargeback",
+      "typical_consumers": ["payment_service", "invoice_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["payment_id", "timestamp"],
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "original_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "reversal_reason": {
+            "type": "string",
+            "enum": ["CHARGEBACK", "MANUAL_REVERSAL", "DUPLICATE", "FRAUD"]
+          },
+          "reversed_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "refund_issued": {
+            "type": "boolean"
+          },
+          "affected_invoices": {
+            "type": "integer"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.payment.failed",
+      "description": "A payment processing attempt has failed",
+      "layer": "L4",
+      "severity": "WARNING",
+      "triggered_by": "Payment processing failure",
+      "typical_consumers": ["payment_service", "audit_logger", "notification_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["payment_id", "failure_reason", "timestamp"],
+        "properties": {
+          "payment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "failure_reason": {
+            "type": "string",
+            "enum": ["INSUFFICIENT_FUNDS", "INVALID_CARD", "GATEWAY_ERROR", "TIMEOUT", "DECLINED"]
+          },
+          "failure_details": {
+            "type": "string"
+          },
+          "retry_count": {
+            "type": "integer"
+          },
+          "can_be_retried": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.settlement.calculated",
+      "description": "A settlement has been calculated",
+      "layer": "L5",
+      "severity": "INFO",
+      "triggered_by": "POST /settlements",
+      "typical_consumers": ["settlement_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["settlement_id", "timestamp"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period": {
+            "type": "object"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "line_items": {
+            "type": "integer",
+            "description": "Number of line items in settlement"
+          },
+          "adjustments_count": {
+            "type": "integer"
+          },
+          "calculated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.settlement.approved",
+      "description": "A settlement has been approved",
+      "layer": "L5",
+      "severity": "INFO",
+      "triggered_by": "PATCH /settlements/{settlement_id}",
+      "typical_consumers": ["settlement_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["settlement_id", "timestamp"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approval_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "scheduled_execution_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.settlement.executed",
+      "description": "A settlement has been executed",
+      "layer": "L5",
+      "severity": "INFO",
+      "triggered_by": "Settlement execution process",
+      "typical_consumers": ["settlement_service", "payment_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["settlement_id", "timestamp"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "reference_number": {
+            "type": "string"
+          },
+          "execution_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.settlement.reconciled",
+      "description": "A settlement has been reconciled",
+      "layer": "L5",
+      "severity": "INFO",
+      "triggered_by": "Reconciliation process",
+      "typical_consumers": ["settlement_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["settlement_id", "timestamp"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expected_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "reconciled_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "discrepancy": {
+            "type": "number",
+            "format": "double"
+          },
+          "reconciliation_status": {
+            "type": "string",
+            "enum": ["RECONCILED", "VARIANCE_FOUND", "INVESTIGATION_REQUIRED"]
+          },
+          "reconciled_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.settlement.disputed",
+      "description": "A settlement has been disputed",
+      "layer": "L5",
+      "severity": "CRITICAL",
+      "triggered_by": "PATCH /settlements/{settlement_id}",
+      "typical_consumers": ["settlement_service", "audit_logger", "dispute_resolution_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["settlement_id", "timestamp"],
+        "properties": {
+          "settlement_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispute_reason": {
+            "type": "string"
+          },
+          "disputed_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispute_amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "supporting_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.revenue_recognition.recorded",
+      "description": "Revenue has been recognized",
+      "layer": "L5",
+      "severity": "INFO",
+      "triggered_by": "POST /revenue-recognition",
+      "typical_consumers": ["revenue_service", "accounting_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["recognition_id", "timestamp"],
+        "properties": {
+          "recognition_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "invoice_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double"
+          },
+          "recognition_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "accounting_code": {
+            "type": "string"
+          },
+          "recognized_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.agent.recommendation_generated",
+      "description": "An intelligent agent has generated a recommendation",
+      "layer": "L6",
+      "severity": "INFO",
+      "triggered_by": "GET /agents/{agent_id}/recommendations",
+      "typical_consumers": ["agent_service", "decision_support_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["agent_id", "recommendation_id", "timestamp"],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "recommendation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["PRICING", "OPTIMIZATION", "RISK", "COMPLIANCE"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "confidence_score": {
+            "type": "number",
+            "format": "float",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "suggested_action": {
+            "type": "string"
+          },
+          "target_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.agent.action_executed",
+      "description": "An intelligent agent has executed an action",
+      "layer": "L6",
+      "severity": "INFO",
+      "triggered_by": "POST /agents/{agent_id}/actions",
+      "typical_consumers": ["agent_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["action_id", "agent_id", "timestamp"],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agent_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": ["ADJUST_PRICING", "APPLY_DISCOUNT", "ESCALATE", "NOTIFY", "UPDATE_TERMS"]
+          },
+          "target_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parameters": {
+            "type": "object"
+          },
+          "result": {
+            "type": "object"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "executed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.agent.escalation_triggered",
+      "description": "An intelligent agent has triggered an escalation",
+      "layer": "L6",
+      "severity": "WARNING",
+      "triggered_by": "Agent escalation logic",
+      "typical_consumers": ["agent_service", "audit_logger", "escalation_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["agent_id", "timestamp"],
+        "properties": {
+          "agent_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "escalation_reason": {
+            "type": "string"
+          },
+          "escalation_level": {
+            "type": "integer"
+          },
+          "target_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignee": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Human assignee or team"
+          },
+          "required_action": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.insight.generated",
+      "description": "An intelligence insight has been generated",
+      "layer": "L6",
+      "severity": "INFO",
+      "triggered_by": "Analytics and intelligence service",
+      "typical_consumers": ["analytics_service", "dashboard_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["insight_id", "timestamp"],
+        "properties": {
+          "insight_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["TREND", "ANOMALY", "PATTERN", "PREDICTION"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "affected_entities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "supporting_data": {
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.policy.created",
+      "description": "A new policy has been created",
+      "layer": "L7",
+      "severity": "INFO",
+      "triggered_by": "POST /policies",
+      "typical_consumers": ["policy_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["policy_id", "name", "timestamp"],
+        "properties": {
+          "policy_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "policy_type": {
+            "type": "string",
+            "enum": ["USAGE", "BILLING", "COMPLIANCE", "SECURITY", "GOVERNANCE"]
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "enforced": {
+            "type": "boolean"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.policy.violated",
+      "description": "A policy violation has been detected",
+      "layer": "L7",
+      "severity": "CRITICAL",
+      "triggered_by": "Policy enforcement engine",
+      "typical_consumers": ["policy_service", "audit_logger", "alert_service", "compliance_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["violation_id", "policy_id", "timestamp"],
+        "properties": {
+          "violation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy_name": {
+            "type": "string"
+          },
+          "violated_rule": {
+            "type": "string"
+          },
+          "violating_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "violation_details": {
+            "type": "object"
+          },
+          "automatic_action_taken": {
+            "type": "string"
+          },
+          "requires_manual_intervention": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.policy.exception_approved",
+      "description": "An exception to a policy has been approved",
+      "layer": "L7",
+      "severity": "INFO",
+      "triggered_by": "Policy exception approval workflow",
+      "typical_consumers": ["policy_service", "audit_logger"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["exception_id", "policy_id", "timestamp"],
+        "properties": {
+          "exception_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "exception_reason": {
+            "type": "string"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approval_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "exception_valid_until": {
+            "type": "string",
+            "format": "date"
+          },
+          "affected_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    {
+      "event_type": "ump.audit.anomaly_detected",
+      "description": "An anomaly has been detected in audit trail",
+      "layer": "L7",
+      "severity": "CRITICAL",
+      "triggered_by": "Audit anomaly detection",
+      "typical_consumers": ["audit_service", "security_service", "alert_service"],
+      "payload_schema": {
+        "type": "object",
+        "required": ["anomaly_id", "timestamp"],
+        "properties": {
+          "anomaly_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "anomaly_type": {
+            "type": "string",
+            "enum": ["UNUSUAL_ACTIVITY", "UNAUTHORIZED_ACCESS", "DATA_INCONSISTENCY", "SUSPICIOUS_PATTERN"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["MEDIUM", "HIGH", "CRITICAL"]
+          },
+          "affected_entity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "recommended_action": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  ]
+}

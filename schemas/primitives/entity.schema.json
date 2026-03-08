@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ump.umpledger.com/schemas/v1/entity.schema.json",
+  "title": "UMP Entity",
+  "description": "Represents any participant in the UMP ecosystem: organizations, individuals, AI agents, or services.",
+  "type": "object",
+  "required": ["entity_id", "entity_type", "status", "created_at"],
+  "properties": {
+    "entity_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Globally unique identifier for this entity.",
+      "examples": ["ent_acme_corp_001", "ent_agent_pricing_optimizer"]
+    },
+    "entity_type": {
+      "type": "string",
+      "enum": ["ORGANIZATION", "INDIVIDUAL", "AGENT", "SERVICE", "DEPARTMENT", "PARTNER"],
+      "description": "Classification of the entity."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PROSPECT", "ACTIVE", "SUSPENDED", "TERMINATED", "ARCHIVED"],
+      "description": "Current lifecycle status."
+    },
+    "legal_name": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "Legal registered name (for organizations)."
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Human-readable display name."
+    },
+    "hierarchy": {
+      "type": "object",
+      "description": "Parent-child organizational hierarchy.",
+      "properties": {
+        "parent_entity_id": {
+          "type": ["string", "null"],
+          "description": "Parent entity ID. Null for top-level entities."
+        },
+        "hierarchy_level": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Depth in hierarchy (0 = root)."
+        },
+        "hierarchy_path": {
+          "type": "string",
+          "description": "Full path from root to this entity.",
+          "examples": ["/global_corp/americas/us_east"]
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "description": "Business classification attributes.",
+      "properties": {
+        "industry": {
+          "type": "string",
+          "examples": ["FINANCIAL_SERVICES", "TECHNOLOGY", "HEALTHCARE", "TELECOM"]
+        },
+        "segment": {
+          "type": "string",
+          "enum": ["ENTERPRISE", "MID_MARKET", "SMB", "STARTUP", "GOVERNMENT", "NON_PROFIT"],
+          "description": "Customer segment classification."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["PLATINUM", "GOLD", "SILVER", "BRONZE", "STANDARD"],
+          "description": "Relationship tier for pricing and service levels."
+        },
+        "risk_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Credit/risk score (0 = lowest risk, 100 = highest risk)."
+        }
+      }
+    },
+    "contact_info": {
+      "type": "object",
+      "properties": {
+        "primary_email": { "type": "string", "format": "email" },
+        "billing_email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "address": { "$ref": "#/$defs/Address" }
+      }
+    },
+    "billing_config": {
+      "type": "object",
+      "description": "Billing preferences and configuration.",
+      "properties": {
+        "billing_currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$",
+          "description": "ISO 4217 currency code for billing."
+        },
+        "billing_cycle": {
+          "type": "string",
+          "enum": ["MONTHLY", "QUARTERLY", "SEMI_ANNUAL", "ANNUAL", "CUSTOM"],
+          "description": "Standard billing frequency."
+        },
+        "payment_terms": {
+          "type": "string",
+          "enum": ["NET_15", "NET_30", "NET_45", "NET_60", "NET_90", "DUE_ON_RECEIPT", "PREPAID"],
+          "description": "Standard payment terms."
+        },
+        "invoice_delivery": {
+          "type": "string",
+          "enum": ["EMAIL", "PORTAL", "API", "EDI", "MAIL"],
+          "description": "How invoices are delivered."
+        },
+        "tax_exemptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "exemption_type": { "type": "string" },
+              "jurisdiction": { "type": "string" },
+              "certificate_id": { "type": "string" },
+              "expiry_date": { "type": "string", "format": "date" }
+            }
+          }
+        },
+        "credit_limit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum outstanding balance allowed."
+        }
+      }
+    },
+    "agent_config": {
+      "type": "object",
+      "description": "Configuration for AGENT entity types only.",
+      "properties": {
+        "agent_class": {
+          "type": "string",
+          "enum": ["PRICING_OPTIMIZER", "ANOMALY_DETECTOR", "REVENUE_FORECASTER", "DUNNING_AGENT", "CONTRACT_ANALYZER", "BUNDLE_OPTIMIZER", "CHURN_PREDICTOR", "CUSTOM"],
+          "description": "Functional classification of the agent."
+        },
+        "bounded_scope": {
+          "type": "object",
+          "description": "Data access boundaries.",
+          "properties": {
+            "allowed_entity_ids": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Entities this agent can access data for."
+            },
+            "allowed_data_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Data categories this agent can read.",
+              "examples": [["pricing_rules", "usage_data", "contract_terms"]]
+            },
+            "excluded_data_types": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Data categories explicitly excluded.",
+              "examples": [["bank_account_details", "payment_credentials"]]
+            }
+          }
+        },
+        "bounded_authority": {
+          "type": "object",
+          "description": "Action permission boundaries.",
+          "properties": {
+            "autonomous_actions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Actions the agent can take without human approval.",
+              "examples": [["RECOMMEND_PRICE", "FLAG_ANOMALY", "GENERATE_FORECAST"]]
+            },
+            "approval_required_actions": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Actions requiring human approval.",
+              "examples": [["CHANGE_PRICE", "ISSUE_CREDIT", "MODIFY_CONTRACT"]]
+            },
+            "financial_limit": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Maximum financial impact ($) without escalation."
+            }
+          }
+        },
+        "model_config": {
+          "type": "object",
+          "description": "AI model configuration (BYOM support).",
+          "properties": {
+            "model_provider": {
+              "type": "string",
+              "enum": ["OPENAI", "ANTHROPIC", "AWS_BEDROCK", "GOOGLE_VERTEX", "AZURE_OPENAI", "CUSTOM"],
+              "description": "AI model provider."
+            },
+            "model_id": { "type": "string" },
+            "confidence_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Minimum confidence score for autonomous action."
+            }
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "description": "Relationships with other entities.",
+      "items": { "$ref": "#/$defs/Relationship" }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "created_by": { "type": "string" }
+  },
+  "$defs": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "line1": { "type": "string" },
+        "line2": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "postal_code": { "type": "string" },
+        "country": { "type": "string", "pattern": "^[A-Z]{2}$" }
+      }
+    },
+    "Relationship": {
+      "type": "object",
+      "required": ["relationship_type", "target_entity_id"],
+      "properties": {
+        "relationship_type": {
+          "type": "string",
+          "enum": ["PARENT_OF", "CHILD_OF", "BILLED_BY", "BILLS_TO", "PARTNER_OF", "MANAGES", "SUBSCRIBES_TO", "OWNS"]
+        },
+        "target_entity_id": { "type": "string" },
+        "effective_from": { "type": "string", "format": "date" },
+        "effective_to": { "type": "string", "format": "date" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}
